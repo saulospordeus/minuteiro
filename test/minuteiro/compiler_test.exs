@@ -35,6 +35,35 @@ defmodule Minuteiro.CompilerTest do
     assert Compiler.compile(parsed, %{estado: "RJ"}) == "Outro estado"
   end
 
+  test "compile/2 compares numeric values against literals" do
+    template = "[SE @idade > 18]Maior de idade[SENAO]Menor de idade[FIM_SE]"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert Compiler.compile(parsed, %{idade: "21"}) == "Maior de idade"
+    assert Compiler.compile(parsed, %{idade: 16}) == "Menor de idade"
+  end
+
+  test "compile/2 compares one variable against another" do
+    template = "[SE @valor_pago < @valor_devido]Saldo pendente[SENAO]Quitado[FIM_SE]"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert Compiler.compile(parsed, %{valor_pago: "50", valor_devido: "100"}) == "Saldo pendente"
+    assert Compiler.compile(parsed, %{valor_pago: 100, valor_devido: 100}) == "Quitado"
+  end
+
+  test "compile/2 respects logical precedence in composite expressions" do
+    template =
+      ~s([SE @idade > 18 && @tipo == "civil" || @admin == true]Permitido[SENAO]Negado[FIM_SE])
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert Compiler.compile(parsed, %{idade: 20, tipo: "civil", admin: false}) == "Permitido"
+    assert Compiler.compile(parsed, %{idade: 20, tipo: "penal", admin: false}) == "Negado"
+    assert Compiler.compile(parsed, %{idade: 16, tipo: "penal", admin: true}) == "Permitido"
+  end
+
   test "compile/2 handles boolean answers in conditions" do
     template = "[SE @ativo = sim]Ativo[SENAO]Inativo[FIM_SE]"
 
@@ -42,6 +71,18 @@ defmodule Minuteiro.CompilerTest do
 
     assert Compiler.compile(parsed, %{ativo: true}) == "Ativo"
     assert Compiler.compile(parsed, %{ativo: false}) == "Inativo"
+  end
+
+  test "compile/2 resolves the first matching branch in chained conditionals" do
+    template =
+      "[SE @idade < 16]absolutamente incapaz[SE @idade >= 16 && @idade < 18]relativamente incapaz[SE @idade > 65]idoso[SENAO]plenamente capaz[FIM_SE]"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert Compiler.compile(parsed, %{idade: 14}) == "absolutamente incapaz"
+    assert Compiler.compile(parsed, %{idade: 17}) == "relativamente incapaz"
+    assert Compiler.compile(parsed, %{idade: 70}) == "idoso"
+    assert Compiler.compile(parsed, %{idade: 30}) == "plenamente capaz"
   end
 
   test "compile/2 removes shorthand boolean declarations" do
@@ -68,9 +109,9 @@ defmodule Minuteiro.CompilerTest do
   end
 
   test "compile_template/2 returns parser errors" do
-    template = "[SE @a = sim]antes [SE @b = sim]durante[FIM_SE] depois[FIM_SE]"
+    template = "[SE @a = sim]antes[SENAO]meio[SENAO]fim[FIM_SE]"
 
-    assert {:error, ["nested conditionals are not supported in V1"]} =
+    assert {:error, ["conditional block can only contain one [SENAO]"]} =
              Compiler.compile_template(template, %{})
   end
 end

@@ -7,7 +7,7 @@ defmodule MinuteiroWeb.TemplateEditorLive do
   def mount(%{"id" => id}, _session, socket) do
     template = Documents.get_template!(id)
 
-    {:ok, assign_editor_state(socket, template, %{}, save_state: :saved)}
+    {:ok, assign_editor_state(socket, template, %{}, save_state: :saved, editor_revision: 0)}
   end
 
   @impl true
@@ -100,6 +100,7 @@ defmodule MinuteiroWeb.TemplateEditorLive do
                     phx-update="ignore"
                     data-target-input-id="template-content-input"
                     data-content={@template.content || ""}
+                    data-content-revision={@editor_revision}
                     data-variable-names={Jason.encode!(@editor_variable_names)}
                     class="overflow-hidden rounded-[1.5rem]"
                   />
@@ -328,10 +329,15 @@ defmodule MinuteiroWeb.TemplateEditorLive do
   end
 
   @impl true
-  def handle_event("editor_changed", %{"content" => content}, socket) do
+  def handle_event("editor_changed", %{"content" => content} = params, socket) do
     template = %{socket.assigns.template | content: content}
+    revision = parse_editor_revision(params["revision"], socket.assigns.editor_revision)
 
-    {:noreply, assign_editor_state(socket, template, socket.assigns.answers, save_state: :dirty)}
+    {:noreply,
+     assign_editor_state(socket, template, socket.assigns.answers,
+       save_state: :dirty,
+       editor_revision: revision
+     )}
   end
 
   @impl true
@@ -351,7 +357,10 @@ defmodule MinuteiroWeb.TemplateEditorLive do
       |> Map.update!(:content, &append_snippet(&1, snippet_for(snippet_name)))
 
     {:noreply,
-     assign_editor_state(socket, updated_template, socket.assigns.answers, save_state: :dirty)}
+     assign_editor_state(socket, updated_template, socket.assigns.answers,
+       save_state: :dirty,
+       editor_revision: next_editor_revision(socket)
+     )}
   end
 
   @impl true
@@ -383,12 +392,14 @@ defmodule MinuteiroWeb.TemplateEditorLive do
 
   defp assign_editor_state(socket, template, answers, opts) do
     save_state = Keyword.get(opts, :save_state, :saved)
+    editor_revision = Keyword.get(opts, :editor_revision, socket.assigns[:editor_revision] || 0)
 
     case Documents.analyze_template(template, answers) do
       {:ok, analysis} ->
         socket
         |> assign(:page_title, "Editor")
         |> assign(:template, template)
+        |> assign(:editor_revision, editor_revision)
         |> assign(:template_variables, analysis.parsed_template.variables)
         |> assign(:variables, analysis.variables)
         |> assign(:answers, answers)
@@ -401,6 +412,7 @@ defmodule MinuteiroWeb.TemplateEditorLive do
         socket
         |> assign(:page_title, "Editor")
         |> assign(:template, template)
+        |> assign(:editor_revision, editor_revision)
         |> assign(:template_variables, [])
         |> assign(:variables, [])
         |> assign(:answers, answers)
@@ -509,6 +521,19 @@ defmodule MinuteiroWeb.TemplateEditorLive do
 
   defp normalize_answer_value(_variable, nil), do: ""
   defp normalize_answer_value(_variable, value), do: value
+
+  defp parse_editor_revision(value, _fallback) when is_integer(value), do: value
+
+  defp parse_editor_revision(value, fallback) when is_binary(value) do
+    case Integer.parse(value) do
+      {revision, ""} -> revision
+      _ -> fallback
+    end
+  end
+
+  defp parse_editor_revision(_value, fallback), do: fallback
+
+  defp next_editor_revision(socket), do: socket.assigns.editor_revision + 1
 
   defp template_form(template) do
     %{

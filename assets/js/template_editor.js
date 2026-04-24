@@ -6,10 +6,14 @@ import {Decoration, EditorView, keymap, ViewPlugin, ViewUpdate} from "@codemirro
 
 const DECLARATION_REGEX = /!@[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]\n]*\]|\?)?/g
 const REFERENCE_REGEX = /@[A-Za-z_][A-Za-z0-9_]*/g
+const CONDITIONAL_OPEN_REGEX = /\[SE[^\]\n]*\]/g
+const CONDITIONAL_ELSE_REGEX = /\[SENAO\]/g
+const CONDITIONAL_CLOSE_REGEX = /\[FIM_SE\]/g
 
 function templateHighlightPlugin() {
   const declarationMark = Decoration.mark({class: "cm-minuteiro-declaration"})
   const referenceMark = Decoration.mark({class: "cm-minuteiro-reference"})
+  const conditionalMark = Decoration.mark({class: "cm-minuteiro-conditional"})
 
   return ViewPlugin.fromClass(
     class {
@@ -54,6 +58,31 @@ function templateHighlightPlugin() {
         if (!insideDeclaration(start, end, declarationRanges)) {
           decorationRanges.push({start, end, mark: referenceMark})
         }
+      }
+
+      CONDITIONAL_OPEN_REGEX.lastIndex = 0
+      while ((match = CONDITIONAL_OPEN_REGEX.exec(text)) !== null) {
+        const start = from + match.index
+        const end = start + match[0].length
+
+        decorationRanges.push({start, end: start + 3, mark: conditionalMark})
+        decorationRanges.push({start: end - 1, end, mark: conditionalMark})
+      }
+
+      CONDITIONAL_ELSE_REGEX.lastIndex = 0
+      while ((match = CONDITIONAL_ELSE_REGEX.exec(text)) !== null) {
+        const start = from + match.index
+        const end = start + match[0].length
+
+        decorationRanges.push({start, end, mark: conditionalMark})
+      }
+
+      CONDITIONAL_CLOSE_REGEX.lastIndex = 0
+      while ((match = CONDITIONAL_CLOSE_REGEX.exec(text)) !== null) {
+        const start = from + match.index
+        const end = start + match[0].length
+
+        decorationRanges.push({start, end, mark: conditionalMark})
       }
 
       decorationRanges
@@ -161,6 +190,7 @@ export const TemplateEditor = {
   mounted() {
     this.hiddenInput = document.getElementById(this.el.dataset.targetInputId)
     this.lastServerValue = this.el.dataset.content || ""
+    this.localRevision = this.contentRevision()
     this.syncTimer = null
 
     const completion = variableCompletionSource(() => this.variableNames())
@@ -187,14 +217,22 @@ export const TemplateEditor = {
 
   updated() {
     const nextValue = this.el.dataset.content || ""
+    const nextRevision = this.contentRevision()
+
+    if (nextRevision < this.localRevision) {
+      return
+    }
 
     if (nextValue !== this.editor.state.doc.toString()) {
       this.lastServerValue = nextValue
+      this.localRevision = nextRevision
       this.editor.dispatch({
         changes: {from: 0, to: this.editor.state.doc.length, insert: nextValue},
         selection: EditorSelection.cursor(nextValue.length),
       })
       this.syncHiddenInput(nextValue)
+    } else {
+      this.localRevision = nextRevision
     }
   },
 
@@ -212,11 +250,12 @@ export const TemplateEditor = {
     }
 
     const value = update.state.doc.toString()
+    this.localRevision += 1
     this.syncHiddenInput(value)
     clearTimeout(this.syncTimer)
 
     this.syncTimer = setTimeout(() => {
-      this.pushEvent("editor_changed", {content: value})
+      this.pushEvent("editor_changed", {content: value, revision: this.localRevision})
     }, 150)
   },
 
@@ -232,5 +271,10 @@ export const TemplateEditor = {
     } catch {
       return []
     }
+  },
+
+  contentRevision() {
+    const revision = Number.parseInt(this.el.dataset.contentRevision || "0", 10)
+    return Number.isNaN(revision) ? 0 : revision
   },
 }

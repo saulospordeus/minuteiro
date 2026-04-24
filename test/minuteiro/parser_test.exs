@@ -29,9 +29,52 @@ defmodule Minuteiro.ParserTest do
     assert [%{condition: condition, truthy_content: truthy_content, falsy_content: falsy_content}] =
              parsed.conditionals
 
-    assert condition == %{variable: "estado", operator: "=", value: "SP"}
+    assert condition == %{
+             type: :comparison,
+             operator: "==",
+             left: %{type: :variable, name: "estado"},
+             right: %{type: :literal, value: "SP"}
+           }
+
     assert truthy_content == "Ola @nome"
     assert falsy_content == "Tchau @nome"
+  end
+
+  test "parse/1 respects comparison and logical precedence inside conditionals" do
+    template = ~s([SE @idade > 18 && @tipo == "civil" || @admin == true]ok[FIM_SE])
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert [%{condition: condition}] = parsed.conditionals
+
+    assert condition == %{
+             type: :logical,
+             operator: "||",
+             left: %{
+               type: :logical,
+               operator: "&&",
+               left: %{
+                 type: :comparison,
+                 operator: ">",
+                 left: %{type: :variable, name: "idade"},
+                 right: %{type: :literal, value: 18}
+               },
+               right: %{
+                 type: :comparison,
+                 operator: "==",
+                 left: %{type: :variable, name: "tipo"},
+                 right: %{type: :literal, value: "civil"}
+               }
+             },
+             right: %{
+               type: :comparison,
+               operator: "==",
+               left: %{type: :variable, name: "admin"},
+               right: %{type: :literal, value: true}
+             }
+           }
+
+    assert parsed.references == ["idade", "tipo", "admin"]
   end
 
   test "parse/1 defaults declarations without explicit type to texto" do
@@ -62,13 +105,82 @@ defmodule Minuteiro.ParserTest do
              %{type: :text, content: "Inicio "},
              %{
                type: :conditional,
-               condition: %{variable: "ativo", operator: "=", value: "sim"},
+               branches: [
+                 %{
+                   condition: %{
+                     type: :comparison,
+                     operator: "==",
+                     left: %{type: :variable, name: "ativo"},
+                     right: %{type: :literal, value: true}
+                   },
+                   content: "meio"
+                 }
+               ],
+               condition: %{
+                 type: :comparison,
+                 operator: "==",
+                 left: %{type: :variable, name: "ativo"},
+                 right: %{type: :literal, value: true}
+               },
+               else_content: "fim",
                truthy_content: "meio",
                falsy_content: "fim",
                raw: "[SE @ativo = sim]meio[SENAO]fim[FIM_SE]"
              },
              %{type: :text, content: " encerramento"}
            ]
+  end
+
+  test "parse/1 supports chained conditional branches in the same block" do
+    template =
+      "[SE @idade < 16]absolutamente incapaz[SE @idade >= 16 && @idade < 18]relativamente incapaz[SE @idade > 65]idoso[SENAO]plenamente capaz[FIM_SE]"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert [conditional] = parsed.conditionals
+    assert conditional.else_content == "plenamente capaz"
+
+    assert conditional.branches == [
+             %{
+               condition: %{
+                 type: :comparison,
+                 operator: "<",
+                 left: %{type: :variable, name: "idade"},
+                 right: %{type: :literal, value: 16}
+               },
+               content: "absolutamente incapaz"
+             },
+             %{
+               condition: %{
+                 type: :logical,
+                 operator: "&&",
+                 left: %{
+                   type: :comparison,
+                   operator: ">=",
+                   left: %{type: :variable, name: "idade"},
+                   right: %{type: :literal, value: 16}
+                 },
+                 right: %{
+                   type: :comparison,
+                   operator: "<",
+                   left: %{type: :variable, name: "idade"},
+                   right: %{type: :literal, value: 18}
+                 }
+               },
+               content: "relativamente incapaz"
+             },
+             %{
+               condition: %{
+                 type: :comparison,
+                 operator: ">",
+                 left: %{type: :variable, name: "idade"},
+                 right: %{type: :literal, value: 65}
+               },
+               content: "idoso"
+             }
+           ]
+
+    assert parsed.references == ["idade"]
   end
 
   test "parse/1 keeps compatibility with persisted list options separated by pipe" do
@@ -86,10 +198,10 @@ defmodule Minuteiro.ParserTest do
            ]
   end
 
-  test "parse/1 rejects nested conditionals" do
-    template = "[SE @a = sim]antes [SE @b = sim]durante[FIM_SE] depois[FIM_SE]"
+  test "parse/1 rejects multiple else branches in the same block" do
+    template = "[SE @a = sim]antes[SENAO]meio[SENAO]fim[FIM_SE]"
 
-    assert {:error, ["nested conditionals are not supported in V1"]} = Parser.parse(template)
+    assert {:error, ["conditional block can only contain one [SENAO]"]} = Parser.parse(template)
   end
 
   test "parse/1 rejects invalid conditional expressions" do

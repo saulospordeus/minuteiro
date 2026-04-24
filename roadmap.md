@@ -114,11 +114,16 @@ Para manter o parser confiavel e facil de testar, a V1 tera limites explicitos.
 @nome_var
 ```
 
-3. Condicional simples:
+3. Blocos condicionais:
 
 ```text
 [SE @variavel = VALOR] ... [SENAO] ... [FIM_SE]
+[SE @variavel = VALOR] ... [SE @outra_variavel = OUTRO_VALOR] ... [SENAO] ... [FIM_SE]
 ```
+
+- A linguagem suporta ramificacoes encadeadas dentro do mesmo bloco logico repetindo ` [SE ...] ` e fechando tudo com um unico ` [FIM_SE] `
+- O primeiro ramo verdadeiro vence
+- `&&` e `||` sao suportados dentro das condicoes com precedencia padrao
 
 4. Tipos de variavel:
 
@@ -131,8 +136,7 @@ Para manter o parser confiavel e facil de testar, a V1 tera limites explicitos.
 
 ### Fora da V1
 
-- condicionais aninhadas
-- operadores logicos compostos (`E`, `OU`)
+- condicionais verdadeiramente aninhadas com um `[FIM_SE]` interno dentro do corpo de outro bloco
 - loops
 - funcoes customizadas
 - expressoes matematicas complexas

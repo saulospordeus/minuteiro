@@ -73,11 +73,16 @@ This is a web application written using the Phoenix web framework.
 @nome_var
 ```
 
-3. Simple conditional blocks
+3. Conditional blocks
 
 ```text
 [SE @variavel = VALOR] ... [SENAO] ... [FIM_SE]
+[SE @variavel = VALOR] ... [SE @outra_variavel = OUTRO_VALOR] ... [SENAO] ... [FIM_SE]
 ```
+
+- The language supports chained branches within the same logical block by repeating ` [SE ...] ` and closing everything with a single ` [FIM_SE] `
+- The first matching branch wins
+- `&&` and `||` are supported inside conditions with standard precedence
 
 4. Variable types
 
@@ -90,8 +95,7 @@ This is a web application written using the Phoenix web framework.
 
 ### Explicitly out of scope in V1
 
-- nested conditionals
-- compound logical operators
+- true nested conditional blocks with an inner `[FIM_SE]` inside another conditional body
 - loops
 - custom functions
 - complex expressions

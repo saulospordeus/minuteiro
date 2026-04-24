@@ -467,6 +467,22 @@ defmodule MinuteiroWeb.CoreComponents do
             !@aniversario[data]
             [FIM_SE]
           </pre>
+          <p class="mt-2">
+            Tambem e possivel encadear varios ramos repetindo
+            <code class="rounded bg-base-300 px-1 py-0.5">[SE]</code>
+            no mesmo bloco e fechando tudo com um unico <code class="rounded bg-base-300 px-1 py-0.5">[FIM_SE]</code>.
+          </p>
+          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">
+            [SE @idade &lt; 16]
+            Absolutamente incapaz
+            [SE @idade &gt;= 16 &amp;&amp; @idade &lt; 18]
+            Relativamente incapaz
+            [SE @idade &gt; 65]
+            Idoso
+            [SENAO]
+            Plenamente capaz
+            [FIM_SE]
+          </pre>
         </div>
 
         <div class="rounded-2xl bg-base-200/50 p-4">

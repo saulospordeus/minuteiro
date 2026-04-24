@@ -37,6 +37,23 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
              ~s(data-variable-names="[&quot;alpha&quot;,&quot;meio&quot;,&quot;zeta&quot;]")
   end
 
+  test "editor renders and updates content revision for hook sync", %{conn: conn} do
+    template = template_fixture()
+
+    {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
+
+    assert render(view) =~ ~s(data-content-revision="0")
+
+    view
+    |> element("#template-content-editor")
+    |> render_hook("editor_changed", %{
+      "content" => "!@cliente\nContrato revisado com @cliente",
+      "revision" => 3
+    })
+
+    assert render(view) =~ ~s(data-content-revision="3")
+  end
+
   test "snippet buttons insert generic syntax into template content", %{conn: conn} do
     template = template_fixture()
 
@@ -120,6 +137,53 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     assert has_element?(view, "#answer_aniversario")
   end
 
+  test "editor reveals fields from the first active chained branch", %{conn: conn} do
+    template =
+      template_fixture(%{
+        content: """
+        !@idade[numero]
+        [SE @idade < 16]
+        !@representante[texto]
+        [SE @idade >= 16 && @idade < 18]
+        !@assistente[texto]
+        [SENAO]
+        !@capaz[texto]
+        [FIM_SE]
+        """
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
+
+    assert has_element?(view, "#answer_idade")
+    refute has_element?(view, "#answer_representante")
+    refute has_element?(view, "#answer_assistente")
+    assert has_element?(view, "#answer_capaz")
+
+    view
+    |> form("#template-answers-form", %{"answers" => %{"idade" => "14"}})
+    |> render_change()
+
+    assert has_element?(view, "#answer_representante")
+    refute has_element?(view, "#answer_assistente")
+    refute has_element?(view, "#answer_capaz")
+
+    view
+    |> form("#template-answers-form", %{"answers" => %{"idade" => "17"}})
+    |> render_change()
+
+    refute has_element?(view, "#answer_representante")
+    assert has_element?(view, "#answer_assistente")
+    refute has_element?(view, "#answer_capaz")
+
+    view
+    |> form("#template-answers-form", %{"answers" => %{"idade" => "30"}})
+    |> render_change()
+
+    refute has_element?(view, "#answer_representante")
+    refute has_element?(view, "#answer_assistente")
+    assert has_element?(view, "#answer_capaz")
+  end
+
   test "editor supports default text and shorthand boolean declarations", %{conn: conn} do
     template =
       template_fixture(%{
@@ -190,7 +254,7 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
       "template" => %{
         "title" => template.title,
         "description" => template.description,
-        "content" => "[SE @a = sim]antes [SE @b = sim]durante[FIM_SE] depois[FIM_SE]"
+        "content" => "[SE @a = sim]antes[SENAO]meio[SENAO]fim[FIM_SE]"
       }
     })
     |> render_change()
@@ -198,7 +262,7 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     assert has_element?(
              view,
              "#template-parse-errors",
-             "nested conditionals are not supported in V1"
+             "conditional block can only contain one [SENAO]"
            )
 
     assert has_element?(view, "#template-answers-error-state")
@@ -216,7 +280,7 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
       "template" => %{
         "title" => template.title,
         "description" => template.description,
-        "content" => "[SE @a = sim]antes [SE @b = sim]durante[FIM_SE] depois[FIM_SE]"
+        "content" => "[SE @a = sim]antes[SENAO]meio[SENAO]fim[FIM_SE]"
       }
     })
     |> render_submit()
@@ -224,7 +288,7 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     updated_template = Documents.get_template!(template.id)
 
     assert updated_template.content ==
-             "[SE @a = sim]antes [SE @b = sim]durante[FIM_SE] depois[FIM_SE]"
+             "[SE @a = sim]antes[SENAO]meio[SENAO]fim[FIM_SE]"
 
     assert has_element?(view, "#template-save-status", "Salvo com alertas")
     assert render(view) =~ "Modelo salvo, mas ainda ha erros de parsing no template."

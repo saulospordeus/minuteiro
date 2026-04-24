@@ -159,9 +159,9 @@ defmodule Minuteiro.DocumentsTest do
   end
 
   test "compile_template_content/2 returns parser errors for invalid content" do
-    content = "[SE @a = sim]antes [SE @b = sim]durante[FIM_SE] depois[FIM_SE]"
+    content = "[SE @a = sim]antes[SENAO]meio[SENAO]fim[FIM_SE]"
 
-    assert {:error, ["nested conditionals are not supported in V1"]} =
+    assert {:error, ["conditional block can only contain one [SENAO]"]} =
              Documents.compile_template_content(content, %{})
   end
 
@@ -198,6 +198,62 @@ defmodule Minuteiro.DocumentsTest do
              Documents.analyze_template_content(content, %{"variavelbooleano" => true})
 
     assert Enum.map(active_analysis.variables, & &1.name) == ["variavelbooleano", "aniversario"]
+  end
+
+  test "analyze_template_content/2 evaluates composite logical conditions" do
+    content = """
+    !@idade[numero]
+    !@tipo
+    !@admin?
+    [SE @idade > 18 && @tipo == "civil" || @admin == true]
+    !@documento_extra
+    [FIM_SE]
+    """
+
+    assert {:ok, denied_analysis} =
+             Documents.analyze_template_content(content, %{
+               "idade" => 16,
+               "tipo" => "penal",
+               "admin" => false
+             })
+
+    assert Enum.map(denied_analysis.variables, & &1.name) == ["idade", "tipo", "admin"]
+
+    assert {:ok, allowed_analysis} =
+             Documents.analyze_template_content(content, %{
+               "idade" => 20,
+               "tipo" => "civil",
+               "admin" => false
+             })
+
+    assert Enum.map(allowed_analysis.variables, & &1.name) == [
+             "idade",
+             "tipo",
+             "admin",
+             "documento_extra"
+           ]
+  end
+
+  test "analyze_template_content/2 only exposes the first active chained branch" do
+    content = """
+    !@idade[numero]
+    [SE @idade < 16]
+    !@representante[texto]
+    [SE @idade >= 16 && @idade < 18]
+    !@assistente[texto]
+    [SENAO]
+    !@capaz[texto]
+    [FIM_SE]
+    """
+
+    assert {:ok, minor_analysis} = Documents.analyze_template_content(content, %{"idade" => 14})
+    assert Enum.map(minor_analysis.variables, & &1.name) == ["idade", "representante"]
+
+    assert {:ok, teen_analysis} = Documents.analyze_template_content(content, %{"idade" => 17})
+    assert Enum.map(teen_analysis.variables, & &1.name) == ["idade", "assistente"]
+
+    assert {:ok, adult_analysis} = Documents.analyze_template_content(content, %{"idade" => 30})
+    assert Enum.map(adult_analysis.variables, & &1.name) == ["idade", "capaz"]
   end
 
   defp template_fixture(attrs \\ %{}) do
