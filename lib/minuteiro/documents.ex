@@ -14,6 +14,15 @@ defmodule Minuteiro.Documents do
     %Template{}
   end
 
+  def ensure_sample_template do
+    attrs = sample_template_attrs()
+
+    case Repo.get_by(Template, title: attrs.title) do
+      nil -> create_template(attrs)
+      template -> update_template(template, attrs)
+    end
+  end
+
   def list_templates do
     from(template in Template, order_by: [desc: template.inserted_at])
     |> Repo.all()
@@ -76,5 +85,35 @@ defmodule Minuteiro.Documents do
          final_document: Compiler.compile(parsed_template, answers)
        }}
     end
+  end
+
+  defp sample_template_attrs do
+    %{
+      title: "Modelo teste",
+      description:
+        "Template salvo automaticamente no ambiente local para exercitar todos os tipos ja suportados, exceto IA.",
+      content:
+        """
+        !@contratante
+        !@data_assinatura[data]
+        !@valor_total[numero]
+        !@tem_representante?
+        !@foro[lista:Recife;Olinda;Jaboatao]
+
+        MINUTA TESTE DE CONTRATO
+
+        Contratante: @contratante
+        Data da assinatura: @data_assinatura
+        Valor total: @valor_total
+        Foro escolhido: @foro
+
+        [SE @tem_representante = sim]
+        O contratante declara que atuara com representante no fechamento deste instrumento.
+        [SENAO]
+        O contratante declara que assinara este instrumento sem representante.
+        [FIM_SE]
+        """
+        |> String.trim()
+    }
   end
 end

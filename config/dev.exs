@@ -65,6 +65,7 @@ config :minuteiro, MinuteiroWeb.Endpoint,
 
 # Enable dev routes for dashboard and mailbox
 config :minuteiro, dev_routes: true
+config :minuteiro, bootstrap_sample_template: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

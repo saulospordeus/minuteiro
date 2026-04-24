@@ -13,6 +13,7 @@ This is a web application written using the Phoenix web framework.
 - `Minuteiro.Documents` and `Minuteiro.Documents.Template` already exist with the initial `templates` persistence model
 - `Minuteiro.Parser` and `Minuteiro.Compiler` already implement the V1 template language core with automated tests
 - `/` already renders a dashboard for listing and creating templates
+- In development, opening `/` also ensures a persisted `Modelo teste` exists for local exploration, covering all supported variable types except `ia` plus a simple `SE` block
 - `/templates/:id/edit` already renders `TemplateEditorLive` with a CodeMirror-based editor, variable autocomplete, stable syntax highlights for declarations and references, support for shorthand declarations (`!@campo`, `!@campo?`), semicolon-separated list options, a dynamic form, compiled preview, syntax manual, save state, parsing feedback, and syntax snippet buttons for the most common template structures
 - The next major product layer is refining the editor workflow and then adding async AI support for `ia` variables
 - `:swoosh` is pinned to a version compatible with the current Elixir toolchain in this environment. Do not upgrade it casually without also revisiting the Elixir version policy

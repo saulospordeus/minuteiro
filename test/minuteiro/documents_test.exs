@@ -89,6 +89,42 @@ defmodule Minuteiro.DocumentsTest do
     assert parsed.references == ["cidade"]
   end
 
+  test "ensure_sample_template/0 creates the sample template once" do
+    assert {:ok, first_template} = Documents.ensure_sample_template()
+    assert {:ok, second_template} = Documents.ensure_sample_template()
+
+    assert first_template.id == second_template.id
+    assert first_template.title == "Modelo teste"
+    assert first_template.content =~ "!@contratante"
+    assert first_template.content =~ "!@data_assinatura[data]"
+    assert first_template.content =~ "!@valor_total[numero]"
+    assert first_template.content =~ "!@tem_representante?"
+    assert first_template.content =~ "!@foro[lista:Recife;Olinda;Jaboatao]"
+    assert first_template.content =~ "[SE @tem_representante = sim]"
+    refute first_template.content =~ "[ia"
+  end
+
+  test "ensure_sample_template/0 refreshes an existing stale sample template" do
+    {:ok, stale_template} =
+      Documents.create_template(%{
+        title: "Modelo teste",
+        description: "Template antigo",
+        content: "!@nome: saulo\n\nMeu nome e @nome."
+      })
+
+    assert {:ok, refreshed_template} = Documents.ensure_sample_template()
+
+    assert refreshed_template.id == stale_template.id
+    assert refreshed_template.description =~ "todos os tipos ja suportados"
+    assert refreshed_template.content =~ "!@contratante"
+    assert refreshed_template.content =~ "!@data_assinatura[data]"
+    assert refreshed_template.content =~ "!@valor_total[numero]"
+    assert refreshed_template.content =~ "!@tem_representante?"
+    assert refreshed_template.content =~ "!@foro[lista:Recife;Olinda;Jaboatao]"
+    assert refreshed_template.content =~ "[SE @tem_representante = sim]"
+    refute refreshed_template.content =~ "!@nome: saulo"
+  end
+
   test "analyze_template_content/2 recognizes shorthand boolean declarations" do
     content = """
     !@tem_representante?

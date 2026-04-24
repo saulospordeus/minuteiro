@@ -9,7 +9,8 @@ import Config
 
 config :minuteiro,
   ecto_repos: [Minuteiro.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  bootstrap_sample_template: false
 
 # Configures the endpoint
 config :minuteiro, MinuteiroWeb.Endpoint,

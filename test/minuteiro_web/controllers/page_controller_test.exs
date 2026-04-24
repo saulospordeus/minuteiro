@@ -31,6 +31,31 @@ defmodule MinuteiroWeb.PageControllerTest do
     assert response =~ "template-card-#{template.id}"
   end
 
+  test "GET / bootstraps the local sample template when enabled", %{conn: conn} do
+    previous_value = Application.get_env(:minuteiro, :bootstrap_sample_template, false)
+    Application.put_env(:minuteiro, :bootstrap_sample_template, true)
+
+    on_exit(fn ->
+      Application.put_env(:minuteiro, :bootstrap_sample_template, previous_value)
+    end)
+
+    conn = get(conn, ~p"/")
+    response = html_response(conn, 200)
+
+    [template] = Documents.list_templates()
+
+    assert response =~ "Modelo teste"
+    assert response =~ template.description
+    assert template.title == "Modelo teste"
+    assert template.content =~ "!@contratante"
+    assert template.content =~ "!@data_assinatura[data]"
+    assert template.content =~ "!@valor_total[numero]"
+    assert template.content =~ "!@tem_representante?"
+    assert template.content =~ "!@foro[lista:Recife;Olinda;Jaboatao]"
+    assert template.content =~ "[SE @tem_representante = sim]"
+    refute template.content =~ "[ia"
+  end
+
   test "POST /templates creates a template and redirects", %{conn: conn} do
     conn =
       post(conn, ~p"/templates", %{

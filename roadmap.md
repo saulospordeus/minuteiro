@@ -14,6 +14,7 @@ Construir uma aplicacao web MPA para criacao, edicao, preenchimento e compilacao
 - `Minuteiro.Parser` e `Minuteiro.Compiler` ja foram implementados com testes unitarios fortes
 - `Minuteiro.Documents` ja expoe parse, compile e analise de templates para a camada web
 - O dashboard em `/` e o editor em `/templates/:id/edit` ja estao funcionando sobre a API de dominio
+- Em desenvolvimento, abrir `/` garante um `Modelo teste` persistido para validacao manual da linguagem, cobrindo texto, data, numero, booleano, lista e um bloco `SE`, sem usar `ia`
 - O editor ja mostra estados de salvamento e erros de parsing de forma explicita
 - O editor ja oferece manual de sintaxe para ajudar o usuario final a escrever templates
 - O editor ja oferece botoes para inserir rapidamente variaveis e blocos condicionais genericos no template
