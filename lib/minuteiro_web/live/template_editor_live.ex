@@ -12,7 +12,10 @@ defmodule MinuteiroWeb.TemplateEditorLive do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :template_form, template_form(assigns.template))
+    assigns =
+      assigns
+      |> assign(:template_form, template_form(assigns.template))
+      |> assign(:editor_variable_names, editor_variable_names(assigns.template_variables))
 
     ~H"""
     <Layouts.app flash={@flash}>
@@ -83,13 +86,25 @@ defmodule MinuteiroWeb.TemplateEditorLive do
                 class="w-full rounded-2xl border border-base-300 bg-base-100 px-4 py-3 focus:border-orange-400 focus:outline-none"
               />
 
-              <.input
-                field={@template_form[:content]}
-                type="textarea"
-                label="Conteudo do template"
-                rows="22"
-                class="w-full rounded-[1.5rem] border border-base-300 bg-slate-950 px-4 py-4 font-mono text-sm text-slate-50 placeholder:text-slate-400 focus:border-orange-400 focus:outline-none"
-              />
+              <div class="fieldset mb-2">
+                <label>
+                  <span class="label mb-1">Conteudo do template</span>
+                  <textarea
+                    id="template-content-input"
+                    name={@template_form[:content].name}
+                    class="hidden"
+                  >{Phoenix.HTML.Form.normalize_value("textarea", @template_form[:content].value)}</textarea>
+                  <div
+                    id="template-content-editor"
+                    phx-hook="TemplateEditor"
+                    phx-update="ignore"
+                    data-target-input-id="template-content-input"
+                    data-content={@template.content || ""}
+                    data-variable-names={Jason.encode!(@editor_variable_names)}
+                    class="overflow-hidden rounded-[1.5rem]"
+                  />
+                </label>
+              </div>
 
               <div class="mt-4 space-y-3" id="template-editor-actions">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
@@ -313,6 +328,13 @@ defmodule MinuteiroWeb.TemplateEditorLive do
   end
 
   @impl true
+  def handle_event("editor_changed", %{"content" => content}, socket) do
+    template = %{socket.assigns.template | content: content}
+
+    {:noreply, assign_editor_state(socket, template, socket.assigns.answers, save_state: :dirty)}
+  end
+
+  @impl true
   def handle_event("update_answers", %{"answers" => raw_answers}, socket) do
     answers = normalize_answers(raw_answers, socket.assigns.variables, socket.assigns.answers)
 
@@ -367,6 +389,7 @@ defmodule MinuteiroWeb.TemplateEditorLive do
         socket
         |> assign(:page_title, "Editor")
         |> assign(:template, template)
+        |> assign(:template_variables, analysis.parsed_template.variables)
         |> assign(:variables, analysis.variables)
         |> assign(:answers, answers)
         |> assign(:final_document, analysis.final_document)
@@ -378,6 +401,7 @@ defmodule MinuteiroWeb.TemplateEditorLive do
         socket
         |> assign(:page_title, "Editor")
         |> assign(:template, template)
+        |> assign(:template_variables, [])
         |> assign(:variables, [])
         |> assign(:answers, answers)
         |> assign(:final_document, "Erro no template:\n" <> Enum.join(errors, "\n"))
@@ -493,6 +517,12 @@ defmodule MinuteiroWeb.TemplateEditorLive do
       "content" => template.content || ""
     }
     |> to_form(as: :template)
+  end
+
+  defp editor_variable_names(variables) do
+    variables
+    |> Enum.map(& &1.name)
+    |> Enum.sort()
   end
 
   defp humanize_variable_name(name) do

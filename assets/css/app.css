@@ -102,4 +102,14 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
+.cm-editor .cm-minuteiro-declaration {
+  color: #ea580c;
+  font-weight: 600;
+}
+
+.cm-editor .cm-minuteiro-reference {
+  color: #166534;
+  font-weight: 600;
+}
+
 /* This file is for your main application CSS */

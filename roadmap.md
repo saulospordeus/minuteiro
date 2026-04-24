@@ -17,6 +17,7 @@ Construir uma aplicacao web MPA para criacao, edicao, preenchimento e compilacao
 - O editor ja mostra estados de salvamento e erros de parsing de forma explicita
 - O editor ja oferece manual de sintaxe para ajudar o usuario final a escrever templates
 - O editor ja oferece botoes para inserir rapidamente variaveis e blocos condicionais genericos no template
+- O editor agora usa CodeMirror com autocomplete de variaveis e highlights estaveis para declaracoes e referencias
 
 ## Proximo passo imediato
 
@@ -255,6 +256,7 @@ Status: concluida na base V1
 4. Persistencia por botao `Salvar`
 5. Feedback de parsing, estado de salvamento e manual de sintaxe para o usuario
 6. Atalhos para inserir snippets de variaveis e bloco `SE` diretamente no editor
+7. Editor baseado em CodeMirror com autocomplete de variaveis e highlight consistente durante a digitacao
 
 ### Fase 6 - IA assincrona
 

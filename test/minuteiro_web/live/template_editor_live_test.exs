@@ -11,6 +11,7 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
 
     assert has_element?(view, "#template-editor-form")
+    assert has_element?(view, "#template-content-editor")
     assert has_element?(view, "#template-answers-form")
     assert has_element?(view, "#final-document-preview", "Contrato com")
     assert has_element?(view, "#template-save-status", "Salvo")
@@ -22,6 +23,18 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     assert has_element?(view, "#create-lista-button", "Criar @lista")
     assert has_element?(view, "#create-ia-button", "Criar @ia")
     assert has_element?(view, "#create-if-block-button", "Criar Bloco Se")
+  end
+
+  test "editor exposes sorted variable names for autocomplete hook", %{conn: conn} do
+    template =
+      template_fixture(%{
+        content: "!@zeta[texto]\n!@alpha[texto]\n!@meio[texto]"
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
+
+    assert render(view) =~
+             ~s(data-variable-names="[&quot;alpha&quot;,&quot;meio&quot;,&quot;zeta&quot;]")
   end
 
   test "snippet buttons insert generic syntax into template content", %{conn: conn} do
@@ -76,6 +89,29 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     |> render_change()
 
     assert has_element?(view, "#final-document-preview", "Representante: Marina")
+  end
+
+  test "conditional variables appear only when boolean condition is verdadeiro", %{conn: conn} do
+    template =
+      template_fixture(%{
+        content: """
+        !@variavelbooleano[booleano]
+        [SE @variavelbooleano = verdadeiro]
+        !@aniversario[data]
+        [FIM_SE]
+        """
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
+
+    assert has_element?(view, "#answer_variavelbooleano")
+    refute has_element?(view, "#answer_aniversario")
+
+    view
+    |> form("#template-answers-form", %{"answers" => %{"variavelbooleano" => "true"}})
+    |> render_change()
+
+    assert has_element?(view, "#answer_aniversario")
   end
 
   test "saving the editor persists template changes", %{conn: conn} do

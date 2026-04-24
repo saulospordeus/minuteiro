@@ -129,6 +129,25 @@ defmodule Minuteiro.DocumentsTest do
     assert analysis.final_document == "Representante:"
   end
 
+  test "analyze_template_content/2 only exposes conditional variables when branch is active" do
+    content = """
+    !@variavelbooleano[booleano]
+    [SE @variavelbooleano = verdadeiro]
+    !@aniversario[data]
+    [FIM_SE]
+    """
+
+    assert {:ok, inactive_analysis} =
+             Documents.analyze_template_content(content, %{"variavelbooleano" => false})
+
+    assert Enum.map(inactive_analysis.variables, & &1.name) == ["variavelbooleano"]
+
+    assert {:ok, active_analysis} =
+             Documents.analyze_template_content(content, %{"variavelbooleano" => true})
+
+    assert Enum.map(active_analysis.variables, & &1.name) == ["variavelbooleano", "aniversario"]
+  end
+
   defp template_fixture(attrs \\ %{}) do
     valid_attrs = %{
       title: "Modelo de procuracao",

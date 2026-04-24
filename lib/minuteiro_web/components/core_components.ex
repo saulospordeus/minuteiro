@@ -457,6 +457,15 @@ defmodule MinuteiroWeb.CoreComponents do
             e <code class="rounded bg-base-300 px-1 py-0.5">[FIM_SE]</code>
             para mostrar trechos diferentes conforme a resposta.
           </p>
+          <p class="mt-2">
+            Se voce declarar uma variavel dentro do bloco condicional, ela so aparecera no
+            formulario quando esse ramo estiver ativo. Exemplo:
+          </p>
+          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">
+            [SE @variavelbooleano = verdadeiro]
+            !@aniversario[data]
+            [FIM_SE]
+          </pre>
         </div>
 
         <div class="rounded-2xl bg-base-200/50 p-4">
