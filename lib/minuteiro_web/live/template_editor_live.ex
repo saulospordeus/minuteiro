@@ -246,7 +246,7 @@ defmodule MinuteiroWeb.TemplateEditorLive do
                 class="rounded-[1.5rem] border border-dashed border-base-300 bg-base-200/40 px-4 py-8 text-center text-sm leading-6 text-base-content/60"
               >
                 Adicione declaracoes como
-                <code class="rounded bg-base-300 px-1 py-0.5">!@cliente[texto]</code>
+                <code class="rounded bg-base-300 px-1 py-0.5">!@cliente</code>
                 no editor para gerar campos aqui.
               </div>
 
@@ -479,11 +479,11 @@ defmodule MinuteiroWeb.TemplateEditorLive do
     end
   end
 
-  defp snippet_for("texto"), do: "!@texto[texto]"
+  defp snippet_for("texto"), do: "!@texto"
   defp snippet_for("data"), do: "!@data[data]"
   defp snippet_for("numero"), do: "!@numero[numero]"
-  defp snippet_for("booleano"), do: "!@booleano[booleano]"
-  defp snippet_for("lista"), do: "!@lista[lista:opcao_1|opcao_2]"
+  defp snippet_for("booleano"), do: "!@booleano?"
+  defp snippet_for("lista"), do: "!@lista[lista:opcao_1;opcao_2;opcao_3]"
   defp snippet_for("ia"), do: "!@ia[ia:descreva o que deve ser gerado]"
 
   defp snippet_for("bloco_se") do

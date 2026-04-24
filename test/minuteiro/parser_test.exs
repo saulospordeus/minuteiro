@@ -5,8 +5,8 @@ defmodule Minuteiro.ParserTest do
 
   test "parse/1 extracts variables, references and top-level conditionals" do
     template = """
-    !@nome[texto]
-    !@estado[lista:SP|RJ|MG]
+    !@nome
+    !@estado[lista:SP;RJ;MG]
 
     [SE @estado = SP]Ola @nome[SENAO]Tchau @nome[FIM_SE]
     """
@@ -18,7 +18,7 @@ defmodule Minuteiro.ParserTest do
              %{
                name: "estado",
                type: "lista",
-               raw_options: "SP|RJ|MG",
+               raw_options: "SP;RJ;MG",
                options: ["SP", "RJ", "MG"]
              }
            ]
@@ -32,6 +32,25 @@ defmodule Minuteiro.ParserTest do
     assert condition == %{variable: "estado", operator: "=", value: "SP"}
     assert truthy_content == "Ola @nome"
     assert falsy_content == "Tchau @nome"
+  end
+
+  test "parse/1 defaults declarations without explicit type to texto" do
+    assert {:ok, parsed} = Parser.parse("!@cliente\nContrato com @cliente")
+
+    assert parsed.variables == [
+             %{name: "cliente", type: "texto", raw_options: nil, options: []}
+           ]
+  end
+
+  test "parse/1 accepts boolean declarations with booleana and question mark syntaxes" do
+    template = "!@aprovado[booleana]\n!@assinado?"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert parsed.variables == [
+             %{name: "aprovado", type: "booleano", raw_options: nil, options: []},
+             %{name: "assinado", type: "booleano", raw_options: nil, options: []}
+           ]
   end
 
   test "parse/1 keeps multiple top-level segments in order" do
@@ -49,6 +68,21 @@ defmodule Minuteiro.ParserTest do
                raw: "[SE @ativo = sim]meio[SENAO]fim[FIM_SE]"
              },
              %{type: :text, content: " encerramento"}
+           ]
+  end
+
+  test "parse/1 keeps compatibility with persisted list options separated by pipe" do
+    template = "!@estado[lista:SP|RJ|MG]"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert parsed.variables == [
+             %{
+               name: "estado",
+               type: "lista",
+               raw_options: "SP|RJ|MG",
+               options: ["SP", "RJ", "MG"]
+             }
            ]
   end
 

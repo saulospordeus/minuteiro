@@ -82,11 +82,27 @@ defmodule Minuteiro.DocumentsTest do
   end
 
   test "parse_template_content/1 parses unsaved editor content" do
-    content = "!@cidade[texto]\nDocumento para @cidade"
+    content = "!@cidade\nDocumento para @cidade"
 
     assert {:ok, parsed} = Documents.parse_template_content(content)
     assert Enum.map(parsed.variables, & &1.name) == ["cidade"]
     assert parsed.references == ["cidade"]
+  end
+
+  test "analyze_template_content/2 recognizes shorthand boolean declarations" do
+    content = """
+    !@tem_representante?
+    [SE @tem_representante = sim]
+    !@representante
+    Representante: @representante
+    [FIM_SE]
+    """
+
+    assert {:ok, analysis} =
+             Documents.analyze_template_content(content, %{"tem_representante" => true})
+
+    assert Enum.map(analysis.variables, & &1.name) == ["tem_representante", "representante"]
+    assert analysis.final_document == "Representante:"
   end
 
   test "compile_template/2 compiles persisted template content" do

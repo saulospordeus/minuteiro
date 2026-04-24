@@ -18,6 +18,7 @@ Construir uma aplicacao web MPA para criacao, edicao, preenchimento e compilacao
 - O editor ja oferece manual de sintaxe para ajudar o usuario final a escrever templates
 - O editor ja oferece botoes para inserir rapidamente variaveis e blocos condicionais genericos no template
 - O editor agora usa CodeMirror com autocomplete de variaveis e highlights estaveis para declaracoes e referencias
+- A sintaxe do template agora aceita texto implicito com `!@campo`, booleano curto com `!@campo?`, alias `booleana` e listas separadas por `;`
 
 ## Proximo passo imediato
 
@@ -96,8 +97,15 @@ Para manter o parser confiavel e facil de testar, a V1 tera limites explicitos.
 1. Declaracao de variavel:
 
 ```text
+!@nome_var
 !@nome_var[tipo:opcoes]
+!@nome_var?
 ```
+
+- `!@nome_var` implica tipo `texto`
+- `!@nome_var?` declara um campo booleano
+- `!@nome_var[booleana]` tambem e aceito como booleano
+- campos `lista` devem usar `;` entre opcoes, por exemplo `!@estado[lista:SP;RJ;MG]`
 
 2. Referencia de variavel:
 
@@ -257,6 +265,7 @@ Status: concluida na base V1
 5. Feedback de parsing, estado de salvamento e manual de sintaxe para o usuario
 6. Atalhos para inserir snippets de variaveis e bloco `SE` diretamente no editor
 7. Editor baseado em CodeMirror com autocomplete de variaveis e highlight consistente durante a digitacao
+8. Suporte a sintaxe curta de declaracao para texto e booleano, com listas usando `;`
 
 ### Fase 6 - IA assincrona
 

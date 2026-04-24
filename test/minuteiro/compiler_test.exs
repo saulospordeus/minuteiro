@@ -6,7 +6,7 @@ defmodule Minuteiro.CompilerTest do
 
   test "compile/2 removes declarations and injects answers" do
     template = """
-    !@nome[texto]
+    !@nome
     !@cidade[texto]
 
     Ola, @nome.
@@ -44,8 +44,16 @@ defmodule Minuteiro.CompilerTest do
     assert Compiler.compile(parsed, %{ativo: false}) == "Inativo"
   end
 
+  test "compile/2 removes shorthand boolean declarations" do
+    template = "!@ativo?\n[SE @ativo = sim]Ativo[FIM_SE]"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert Compiler.compile(parsed, %{ativo: true}) == "Ativo"
+  end
+
   test "compile/2 replaces missing answers with empty strings" do
-    template = "!@nome[texto]\nAssinado por @nome"
+    template = "!@nome\nAssinado por @nome"
 
     assert {:ok, parsed} = Parser.parse(template)
 
@@ -53,7 +61,7 @@ defmodule Minuteiro.CompilerTest do
   end
 
   test "compile_template/2 compiles directly from source" do
-    template = "!@nome[texto]\n[SE @ativo = true]@nome[FIM_SE]"
+    template = "!@nome\n[SE @ativo = true]@nome[FIM_SE]"
 
     assert {:ok, "Maria"} =
              Compiler.compile_template(template, %{"nome" => "Maria", "ativo" => true})

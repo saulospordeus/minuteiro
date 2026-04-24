@@ -421,10 +421,11 @@ defmodule MinuteiroWeb.CoreComponents do
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
             Declarar variavel
           </p>
-          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">!@nome[texto]</pre>
+          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">!@nome</pre>
           <p class="mt-2">
             Isso cria um campo chamado <code class="rounded bg-base-300 px-1 py-0.5">nome</code>
             do tipo <code class="rounded bg-base-300 px-1 py-0.5">texto</code>.
+            Se o tipo nao for informado, o editor assume texto por padrao.
           </p>
         </div>
 
@@ -471,6 +472,16 @@ defmodule MinuteiroWeb.CoreComponents do
         <div class="rounded-2xl bg-base-200/50 p-4">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
             Tipos suportados na V1
+          </p>
+          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">!@estado[lista:SP;RJ;MG]</pre>
+          <p class="mt-2">
+            Para campos do tipo <code class="rounded bg-base-300 px-1 py-0.5">lista</code>,
+            separe as opcoes com <code class="rounded bg-base-300 px-1 py-0.5">;</code>.
+          </p>
+          <p class="mt-2">
+            Campos booleanos podem ser declarados como
+            <code class="rounded bg-base-300 px-1 py-0.5">!@aprovado[booleana]</code>
+            ou de forma curta com <code class="rounded bg-base-300 px-1 py-0.5">!@aprovado?</code>.
           </p>
           <div class="mt-3 flex flex-wrap gap-2">
             <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">

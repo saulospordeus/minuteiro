@@ -4,7 +4,7 @@ import {autocompletion} from "@codemirror/autocomplete"
 import {defaultKeymap, history, historyKeymap} from "@codemirror/commands"
 import {Decoration, EditorView, keymap, ViewPlugin, ViewUpdate} from "@codemirror/view"
 
-const DECLARATION_REGEX = /!@[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]\n]*\])?/g
+const DECLARATION_REGEX = /!@[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]\n]*\]|\?)?/g
 const REFERENCE_REGEX = /@[A-Za-z_][A-Za-z0-9_]*/g
 
 function templateHighlightPlugin() {

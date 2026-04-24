@@ -7,7 +7,7 @@ defmodule Minuteiro.Parser do
   @conditional_else "[SENAO]"
   @conditional_close "[FIM_SE]"
 
-  @declaration_regex ~r/!@([[:alpha:]_][[:alnum:]_]*)\[([^\]]+)\]/u
+  @declaration_regex ~r/!@([[:alpha:]_][[:alnum:]_]*)(?:\[([^\]]+)\]|(\?))?/u
   @reference_regex ~r/(?:^|[^![:alnum:]_])@([[:alpha:]_][[:alnum:]_]*)/u
   @condition_regex ~r/^@([[:alpha:]_][[:alnum:]_]*)\s*=\s*(.+)$/u
 
@@ -117,36 +117,77 @@ defmodule Minuteiro.Parser do
 
   defp extract_variables(template) do
     @declaration_regex
-    |> Regex.scan(template, capture: :all_but_first)
-    |> Enum.reduce([], fn [name, config], variables ->
+    |> Regex.scan(template)
+    |> Enum.reduce([], fn [declaration, name | _rest], variables ->
       if Enum.any?(variables, &(&1.name == name)) do
         variables
       else
-        variables ++ [build_variable(name, config)]
+        variables ++ [build_variable(name, declaration)]
       end
     end)
   end
 
-  defp build_variable(name, config) do
+  defp build_variable(name, declaration) when is_binary(declaration) do
+    declaration = String.trim(declaration)
+
+    cond do
+      String.ends_with?(declaration, "?") ->
+        boolean_variable(name)
+
+      String.contains?(declaration, "[") ->
+        declaration
+        |> extract_declaration_config()
+        |> build_variable_from_config(name)
+
+      true ->
+        %{name: name, type: "texto", raw_options: nil, options: []}
+    end
+  end
+
+  defp boolean_variable(name) do
+    %{name: name, type: "booleano", raw_options: nil, options: []}
+  end
+
+  defp extract_declaration_config(declaration) do
+    declaration
+    |> String.split("[", parts: 2)
+    |> List.last()
+    |> String.trim_trailing("]")
+  end
+
+  defp build_variable_from_config(config, name) do
     case String.split(config, ":", parts: 2) do
       [type] ->
-        %{name: name, type: String.trim(type), raw_options: nil, options: []}
+        normalized_type = normalize_type(type)
+
+        if normalized_type == "booleano" do
+          boolean_variable(name)
+        else
+          %{name: name, type: normalized_type, raw_options: nil, options: []}
+        end
 
       [type, raw_options] ->
         raw_options = String.trim(raw_options)
 
         %{
           name: name,
-          type: String.trim(type),
+          type: normalize_type(type),
           raw_options: raw_options,
           options: split_options(raw_options)
         }
     end
   end
 
+  defp normalize_type(type) do
+    case String.trim(type) do
+      "booleana" -> "booleano"
+      normalized_type -> normalized_type
+    end
+  end
+
   defp split_options(raw_options) do
     raw_options
-    |> String.split(~r/\s*[\|,]\s*/u, trim: true)
+    |> String.split(~r/\s*[;\|,]\s*/u, trim: true)
   end
 
   defp extract_references(segments) do

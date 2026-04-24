@@ -5,8 +5,8 @@ defmodule Minuteiro.Compiler do
 
   alias Minuteiro.Parser
 
-  @declaration_line_regex ~r/^[ \t]*!@[[:alpha:]_][[:alnum:]_]*\[[^\]]+\][ \t]*\r?\n?/mu
-  @declaration_regex ~r/!@[[:alpha:]_][[:alnum:]_]*\[[^\]]+\]/u
+  @declaration_line_regex ~r/^[ \t]*!@[[:alpha:]_][[:alnum:]_]*(?:\[[^\]]+\]|\?)?[ \t]*\r?\n?/mu
+  @declaration_regex ~r/!@[[:alpha:]_][[:alnum:]_]*(?:\[[^\]]+\]|\?)?/u
   @reference_replace_regex ~r/(^|[^[:alnum:]_])@([[:alpha:]_][[:alnum:]_]*)/u
 
   def active_content(parsed_template, answers \\ %{})

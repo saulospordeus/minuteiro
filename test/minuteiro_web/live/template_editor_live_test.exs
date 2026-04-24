@@ -28,7 +28,7 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
   test "editor exposes sorted variable names for autocomplete hook", %{conn: conn} do
     template =
       template_fixture(%{
-        content: "!@zeta[texto]\n!@alpha[texto]\n!@meio[texto]"
+        content: "!@zeta\n!@alpha\n!@meio"
       })
 
     {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
@@ -46,8 +46,14 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     |> element("#create-texto-button")
     |> render_click()
 
-    assert render(view) =~ "!@texto[texto]"
+    assert render(view) =~ "!@texto"
     assert has_element?(view, "#template-save-status", "Alteracoes locais")
+
+    view
+    |> element("#create-booleano-button")
+    |> render_click()
+
+    assert render(view) =~ "!@booleano?"
 
     view
     |> element("#create-if-block-button")
@@ -112,6 +118,24 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     |> render_change()
 
     assert has_element?(view, "#answer_aniversario")
+  end
+
+  test "editor supports default text and shorthand boolean declarations", %{conn: conn} do
+    template =
+      template_fixture(%{
+        content: """
+        !@cliente
+        !@aprovado?
+        [SE @aprovado = sim]
+        Documento para @cliente
+        [FIM_SE]
+        """
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
+
+    assert has_element?(view, "#answer_cliente")
+    assert has_element?(view, "#answer_aprovado")
   end
 
   test "saving the editor persists template changes", %{conn: conn} do
@@ -210,7 +234,7 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     valid_attrs = %{
       title: "Contrato base",
       description: "Modelo para o editor",
-      content: "!@cliente[texto]\nContrato com @cliente"
+      content: "!@cliente\nContrato com @cliente"
     }
 
     {:ok, template} = Documents.create_template(Map.merge(valid_attrs, attrs))
