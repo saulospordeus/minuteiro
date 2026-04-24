@@ -11,6 +11,8 @@ defmodule MinuteiroWeb.PageControllerTest do
     assert response =~ "Modelos juridicos prontos para evoluir"
     assert response =~ "dashboard-template-form"
     assert response =~ "Nenhum modelo salvo ainda"
+    assert response =~ "dashboard-syntax-manual"
+    assert response =~ "Manual da sintaxe"
   end
 
   test "GET / lists saved templates", %{conn: conn} do

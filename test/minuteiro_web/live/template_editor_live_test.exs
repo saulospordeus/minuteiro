@@ -14,6 +14,36 @@ defmodule MinuteiroWeb.TemplateEditorLiveTest do
     assert has_element?(view, "#template-answers-form")
     assert has_element?(view, "#final-document-preview", "Contrato com")
     assert has_element?(view, "#template-save-status", "Salvo")
+    assert has_element?(view, "#editor-syntax-manual", "Manual da sintaxe")
+    assert has_element?(view, "#create-texto-button", "Criar @texto")
+    assert has_element?(view, "#create-data-button", "Criar @data")
+    assert has_element?(view, "#create-numero-button", "Criar @numero")
+    assert has_element?(view, "#create-booleano-button", "Criar @booleano")
+    assert has_element?(view, "#create-lista-button", "Criar @lista")
+    assert has_element?(view, "#create-ia-button", "Criar @ia")
+    assert has_element?(view, "#create-if-block-button", "Criar Bloco Se")
+  end
+
+  test "snippet buttons insert generic syntax into template content", %{conn: conn} do
+    template = template_fixture()
+
+    {:ok, view, _html} = live(conn, ~p"/templates/#{template.id}/edit")
+
+    view
+    |> element("#create-texto-button")
+    |> render_click()
+
+    assert render(view) =~ "!@texto[texto]"
+    assert has_element?(view, "#template-save-status", "Alteracoes locais")
+
+    view
+    |> element("#create-if-block-button")
+    |> render_click()
+
+    rendered = render(view)
+    assert rendered =~ "[SE @var = verdadeiro]"
+    assert rendered =~ "resultado verdadeiro"
+    assert rendered =~ "[FIM_SE]"
   end
 
   test "answers update preview and reveal conditional fields", %{conn: conn} do

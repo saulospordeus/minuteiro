@@ -393,6 +393,108 @@ defmodule MinuteiroWeb.CoreComponents do
   end
 
   @doc """
+  Renders an expandable syntax manual for Minuteiro templates.
+  """
+  attr :id, :string, required: true
+  attr :class, :string, default: nil
+
+  def syntax_manual(assigns) do
+    ~H"""
+    <details
+      id={@id}
+      class={[@class, "group overflow-hidden rounded-[1.5rem] border border-base-300/70 bg-base-100"]}
+    >
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-sm font-semibold text-base-content marker:hidden">
+        <span class="inline-flex items-center gap-3">
+          <span class="rounded-xl bg-orange-500/10 p-2 text-orange-600 dark:text-orange-300">
+            <.icon name="hero-book-open" class="size-5" />
+          </span>
+          Manual da sintaxe
+        </span>
+        <span class="rounded-full border border-base-300 bg-base-200/70 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-base-content/50 transition group-open:rotate-180">
+          <.icon name="hero-chevron-down" class="size-4" />
+        </span>
+      </summary>
+
+      <div class="space-y-5 border-t border-base-300/70 px-4 py-4 text-sm leading-6 text-base-content/75">
+        <div class="rounded-2xl bg-base-200/50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
+            Declarar variavel
+          </p>
+          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">!@nome[texto]</pre>
+          <p class="mt-2">
+            Isso cria um campo chamado <code class="rounded bg-base-300 px-1 py-0.5">nome</code>
+            do tipo <code class="rounded bg-base-300 px-1 py-0.5">texto</code>.
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-base-200/50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
+            Usar a resposta no texto
+          </p>
+          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">Contrato firmado com @nome</pre>
+          <p class="mt-2">
+            Sempre que o documento for compilado,
+            <code class="rounded bg-base-300 px-1 py-0.5">@nome</code>
+            sera trocado pelo valor preenchido.
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-base-200/50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
+            Condicional simples
+          </p>
+          <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-950 px-3 py-3 font-mono text-sm text-slate-100">
+            [SE @tipo = PF]
+            Pessoa fisica
+            [SENAO]
+            Pessoa juridica
+            [FIM_SE]
+          </pre>
+          <p class="mt-2">
+            Use <code class="rounded bg-base-300 px-1 py-0.5">[SE]</code>,
+            <code class="rounded bg-base-300 px-1 py-0.5">[SENAO]</code>
+            e <code class="rounded bg-base-300 px-1 py-0.5">[FIM_SE]</code>
+            para mostrar trechos diferentes conforme a resposta.
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-base-200/50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
+            Tipos suportados na V1
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">
+              texto
+            </span>
+            <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">
+              data
+            </span>
+            <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">
+              numero
+            </span>
+            <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">
+              booleano
+            </span>
+            <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">
+              lista
+            </span>
+            <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">ia</span>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-amber-300/40 bg-amber-50/70 p-4 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em]">Limites da V1</p>
+          <p class="mt-2">
+            Ainda nao ha suporte para condicionais aninhadas, operadores compostos, loops ou expressoes complexas.
+          </p>
+        </div>
+      </div>
+    </details>
+    """
+  end
+
+  @doc """
   Renders a [Heroicon](https://heroicons.com).
 
   Heroicons come in three styles – outline, solid, and mini.

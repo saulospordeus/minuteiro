@@ -16,6 +16,7 @@ Construir uma aplicacao web MPA para criacao, edicao, preenchimento e compilacao
 - O dashboard em `/` e o editor em `/templates/:id/edit` ja estao funcionando sobre a API de dominio
 - O editor ja mostra estados de salvamento e erros de parsing de forma explicita
 - O editor ja oferece manual de sintaxe para ajudar o usuario final a escrever templates
+- O editor ja oferece botoes para inserir rapidamente variaveis e blocos condicionais genericos no template
 
 ## Proximo passo imediato
 
@@ -253,6 +254,7 @@ Status: concluida na base V1
 3. Preview compilado em tempo real
 4. Persistencia por botao `Salvar`
 5. Feedback de parsing, estado de salvamento e manual de sintaxe para o usuario
+6. Atalhos para inserir snippets de variaveis e bloco `SE` diretamente no editor
 
 ### Fase 6 - IA assincrona
 

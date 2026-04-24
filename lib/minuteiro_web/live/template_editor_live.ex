@@ -16,7 +16,7 @@ defmodule MinuteiroWeb.TemplateEditorLive do
 
     ~H"""
     <Layouts.app flash={@flash}>
-      <section class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_24rem_minmax(0,1fr)] xl:items-start">
+      <section class="space-y-6">
         <div class="overflow-hidden rounded-[2rem] border border-base-300/70 bg-base-100 shadow-[0_28px_90px_-50px_rgba(15,23,42,0.55)]">
           <div class="border-b border-base-300/70 px-6 py-6 sm:px-8">
             <div class="flex flex-wrap items-start justify-between gap-4">
@@ -90,6 +90,80 @@ defmodule MinuteiroWeb.TemplateEditorLive do
                 rows="22"
                 class="w-full rounded-[1.5rem] border border-base-300 bg-slate-950 px-4 py-4 font-mono text-sm text-slate-50 placeholder:text-slate-400 focus:border-orange-400 focus:outline-none"
               />
+
+              <div class="mt-4 space-y-3" id="template-editor-actions">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">
+                  Atalhos de criacao
+                </p>
+
+                <div class="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    id="create-texto-button"
+                    phx-click="insert_snippet"
+                    phx-value-snippet="texto"
+                    class="btn btn-primary rounded-2xl"
+                  >
+                    Criar @texto
+                  </button>
+                  <button
+                    type="button"
+                    id="create-data-button"
+                    phx-click="insert_snippet"
+                    phx-value-snippet="data"
+                    class="btn btn-outline rounded-2xl"
+                  >
+                    Criar @data
+                  </button>
+                  <button
+                    type="button"
+                    id="create-numero-button"
+                    phx-click="insert_snippet"
+                    phx-value-snippet="numero"
+                    class="btn btn-outline rounded-2xl"
+                  >
+                    Criar @numero
+                  </button>
+                  <button
+                    type="button"
+                    id="create-booleano-button"
+                    phx-click="insert_snippet"
+                    phx-value-snippet="booleano"
+                    class="btn btn-outline rounded-2xl"
+                  >
+                    Criar @booleano
+                  </button>
+                  <button
+                    type="button"
+                    id="create-lista-button"
+                    phx-click="insert_snippet"
+                    phx-value-snippet="lista"
+                    class="btn btn-outline rounded-2xl"
+                  >
+                    Criar @lista
+                  </button>
+                  <button
+                    type="button"
+                    id="create-ia-button"
+                    phx-click="insert_snippet"
+                    phx-value-snippet="ia"
+                    class="btn btn-outline rounded-2xl"
+                  >
+                    Criar @ia
+                  </button>
+                  <button
+                    type="button"
+                    id="create-if-block-button"
+                    phx-click="insert_snippet"
+                    phx-value-snippet="bloco_se"
+                    class="btn btn-outline rounded-2xl"
+                  >
+                    Criar Bloco Se
+                  </button>
+                </div>
+              </div>
+
+              <.syntax_manual id="editor-syntax-manual" class="mt-4" />
 
               <div
                 :if={@parse_errors != []}
@@ -249,6 +323,16 @@ defmodule MinuteiroWeb.TemplateEditorLive do
   end
 
   @impl true
+  def handle_event("insert_snippet", %{"snippet" => snippet_name}, socket) do
+    updated_template =
+      socket.assigns.template
+      |> Map.update!(:content, &append_snippet(&1, snippet_for(snippet_name)))
+
+    {:noreply,
+     assign_editor_state(socket, updated_template, socket.assigns.answers, save_state: :dirty)}
+  end
+
+  @impl true
   def handle_event("save", %{"template" => attrs}, socket) do
     case Documents.update_template(socket.assigns.template, attrs) do
       {:ok, template} ->
@@ -359,6 +443,34 @@ defmodule MinuteiroWeb.TemplateEditorLive do
       content: Map.get(attrs, "content", template.content)
     }
     |> then(&struct(template, &1))
+  end
+
+  defp append_snippet(content, snippet) do
+    content = String.trim_trailing(content || "")
+
+    if content == "" do
+      snippet
+    else
+      content <> "\n\n" <> snippet
+    end
+  end
+
+  defp snippet_for("texto"), do: "!@texto[texto]"
+  defp snippet_for("data"), do: "!@data[data]"
+  defp snippet_for("numero"), do: "!@numero[numero]"
+  defp snippet_for("booleano"), do: "!@booleano[booleano]"
+  defp snippet_for("lista"), do: "!@lista[lista:opcao_1|opcao_2]"
+  defp snippet_for("ia"), do: "!@ia[ia:descreva o que deve ser gerado]"
+
+  defp snippet_for("bloco_se") do
+    """
+    [SE @var = verdadeiro]
+    resultado verdadeiro
+    [SENAO]
+    resultado falso
+    [FIM_SE]
+    """
+    |> String.trim()
   end
 
   defp normalize_answers(raw_answers, variables, existing_answers) do
