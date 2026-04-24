@@ -1,0 +1,155 @@
+<Layouts.app flash={@flash}>
+  <section class="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(24rem,0.9fr)] lg:items-start">
+    <div class="space-y-6">
+      <div class="overflow-hidden rounded-[2rem] border border-base-300/70 bg-base-100 shadow-[0_28px_90px_-50px_rgba(15,23,42,0.55)]">
+        <div class="border-b border-base-300/70 px-6 py-6 sm:px-8">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="max-w-2xl space-y-3">
+              <span class="inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-orange-600 dark:text-orange-300">
+                Dashboard
+              </span>
+              <h1 class="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+                Modelos juridicos prontos para evoluir do rascunho ao documento final.
+              </h1>
+              <p class="max-w-xl text-sm leading-7 text-base-content/70 sm:text-base">
+                Crie a base do template, acompanhe o acervo salvo e prepare o terreno para o editor compilado que vira na proxima etapa.
+              </p>
+            </div>
+
+            <div class="grid min-w-56 grid-cols-2 gap-3 rounded-3xl border border-base-300/70 bg-base-200/60 p-3 text-sm shadow-inner shadow-base-300/50">
+              <div class="rounded-2xl bg-base-100 px-4 py-3 shadow-sm">
+                <p class="text-xs uppercase tracking-[0.18em] text-base-content/50">Templates</p>
+                <p class="mt-2 text-2xl font-semibold">{length(@templates)}</p>
+              </div>
+              <div class="rounded-2xl bg-base-100 px-4 py-3 shadow-sm">
+                <p class="text-xs uppercase tracking-[0.18em] text-base-content/50">Motor</p>
+                <p class="mt-2 text-sm font-semibold text-base-content/80">Parser + Compiler</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-6 sm:px-8">
+          <div
+            :if={@templates == []}
+            id="templates-empty-state"
+            class="rounded-[1.75rem] border border-dashed border-base-300 bg-base-200/40 px-6 py-10 text-center"
+          >
+            <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-base-100 shadow-sm">
+              <.icon name="hero-document-text" class="size-7 text-orange-500" />
+            </div>
+            <h2 class="mt-5 text-xl font-semibold">Nenhum modelo salvo ainda</h2>
+            <p class="mx-auto mt-3 max-w-md text-sm leading-6 text-base-content/65">
+              Use o painel ao lado para cadastrar o primeiro template e comecar a montar o acervo inicial do Minuteiro.
+            </p>
+          </div>
+
+          <div
+            :if={@templates != []}
+            id="templates-grid"
+            class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+          >
+            <.link
+              :for={template <- @templates}
+              navigate={~p"/templates/#{template.id}/edit"}
+              class="block"
+            >
+              <article
+                id={"template-card-#{template.id}"}
+                class="group flex h-full flex-col rounded-[1.75rem] border border-base-300/70 bg-base-100 p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_-45px_rgba(249,115,22,0.85)]"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="space-y-2">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/45">
+                      Template #{template.id}
+                    </p>
+                    <h2 class="text-lg font-semibold leading-7 text-balance">{template.title}</h2>
+                  </div>
+                  <div class="rounded-2xl bg-orange-500/10 p-2 text-orange-600 transition group-hover:bg-orange-500 group-hover:text-white dark:text-orange-300 dark:group-hover:text-slate-950">
+                    <.icon name="hero-arrow-up-right" class="size-5" />
+                  </div>
+                </div>
+
+                <p class="mt-4 line-clamp-3 text-sm leading-6 text-base-content/70">
+                  {template.description ||
+                    "Sem descricao por enquanto. Este modelo esta pronto para ganhar campos, condicionais e compilacao assistida."}
+                </p>
+
+                <div class="mt-6 flex flex-wrap gap-2">
+                  <span class="rounded-full border border-base-300 bg-base-200/70 px-3 py-1 text-xs font-medium text-base-content/60">
+                    Atualizado em {Calendar.strftime(template.updated_at, "%d/%m/%Y")}
+                  </span>
+                  <span class="rounded-full border border-base-300 bg-base-200/70 px-3 py-1 text-xs font-medium text-base-content/60">
+                    {String.length(template.content)} caracteres
+                  </span>
+                </div>
+              </article>
+            </.link>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="lg:sticky lg:top-8">
+      <div class="overflow-hidden rounded-[2rem] border border-base-300/70 bg-slate-950 text-slate-50 shadow-[0_32px_90px_-45px_rgba(15,23,42,0.95)] dark:border-slate-700 dark:bg-slate-900">
+        <div class="border-b border-white/10 px-6 py-6 sm:px-7">
+          <p class="text-xs font-semibold uppercase tracking-[0.24em] text-orange-300">
+            Novo modelo
+          </p>
+          <h2 class="mt-3 text-2xl font-semibold tracking-tight">Cadastre um template base</h2>
+          <p class="mt-3 text-sm leading-6 text-slate-300/80">
+            Crie o titulo, o contexto e o conteudo inicial. O editor dedicado vira na proxima camada, mas a persistencia ja comeca aqui.
+          </p>
+        </div>
+
+        <div class="px-6 py-6 sm:px-7">
+          <.form for={@form} id="dashboard-template-form" action={~p"/templates"} method="post">
+            <.input
+              field={@form[:title]}
+              type="text"
+              label="Titulo"
+              placeholder="Ex.: Contrato de honorarios"
+              class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-slate-50 placeholder:text-slate-400 focus:border-orange-300 focus:outline-none"
+              error_class="border-red-300"
+            />
+
+            <.input
+              field={@form[:description]}
+              type="textarea"
+              label="Descricao"
+              placeholder="Explique em uma frase quando este modelo deve ser usado"
+              rows="4"
+              class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-slate-50 placeholder:text-slate-400 focus:border-orange-300 focus:outline-none"
+              error_class="border-red-300"
+            />
+
+            <.input
+              field={@form[:content]}
+              type="textarea"
+              label="Conteudo inicial"
+              placeholder="!@cliente[texto]\nContrato firmado com @cliente"
+              rows="10"
+              class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-mono text-sm text-slate-50 placeholder:text-slate-400 focus:border-orange-300 focus:outline-none"
+              error_class="border-red-300"
+            />
+
+            <div class="mt-6 space-y-3">
+              <.button
+                type="submit"
+                id="create-template-button"
+                class="w-full rounded-2xl bg-orange-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-300"
+              >
+                Criar modelo
+              </.button>
+              <p class="text-xs leading-6 text-slate-400">
+                Dica: voce ja pode usar marcacoes como
+                <code class="rounded bg-white/10 px-1 py-0.5 text-orange-200">!@nome[texto]</code>
+                e <code class="rounded bg-white/10 px-1 py-0.5 text-orange-200">@nome</code>.
+              </p>
+            </div>
+          </.form>
+        </div>
+      </div>
+    </aside>
+  </section>
+</Layouts.app>
