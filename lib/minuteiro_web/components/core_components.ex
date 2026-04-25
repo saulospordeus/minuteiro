@@ -499,6 +499,11 @@ defmodule MinuteiroWeb.CoreComponents do
             <code class="rounded bg-base-300 px-1 py-0.5">!@aprovado[booleana]</code>
             ou de forma curta com <code class="rounded bg-base-300 px-1 py-0.5">!@aprovado?</code>.
           </p>
+          <p class="mt-2">
+            Variaveis do tipo <code class="rounded bg-base-300 px-1 py-0.5">ia</code>
+            usam a sintaxe <code class="rounded bg-base-300 px-1 py-0.5">!@ementa[ia: Resuma o caso com base no contexto]</code>.
+            O editor mostra um campo de contexto global, permite ajustar a instrucao e exige revisao humana do resultado antes da compilacao final.
+          </p>
           <div class="mt-3 flex flex-wrap gap-2">
             <span class="rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs">
               texto

@@ -20,6 +20,11 @@ if System.get_env("PHX_SERVER") do
   config :minuteiro, MinuteiroWeb.Endpoint, server: true
 end
 
+config :minuteiro, Minuteiro.AI,
+  api_key: System.get_env("GEMINI_API_KEY"),
+  model: System.get_env("GEMINI_MODEL") || "gemini-2.0-flash",
+  timeout_ms: String.to_integer(System.get_env("GEMINI_TIMEOUT_MS") || "30000")
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

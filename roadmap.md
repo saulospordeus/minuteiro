@@ -13,8 +13,10 @@ Construir uma aplicacao web MPA para criacao, edicao, preenchimento e compilacao
 - `Minuteiro.Documents` e `Minuteiro.Documents.Template` ja existem com migration e CRUD basico testado
 - `Minuteiro.Parser` e `Minuteiro.Compiler` ja foram implementados com testes unitarios fortes
 - `Minuteiro.Documents` ja expoe parse, compile e analise de templates para a camada web
-- O dashboard em `/` e o editor em `/templates/:id/edit` ja estao funcionando sobre a API de dominio
-- Em desenvolvimento, abrir `/` garante um `Modelo teste` persistido para validacao manual da linguagem, cobrindo texto, data, numero, booleano, lista e um bloco `SE`, sem usar `ia`
+- Autenticacao com `phx.gen.auth` foi instalada e o dashboard em `/` agora exige login
+- O editor em `/templates/:id/edit` tambem exige autenticacao e opera apenas sobre templates do usuario logado
+- `templates` agora pertencem a um usuario via `user_id`, com queries e testes de ownership
+- Em desenvolvimento, abrir `/` enquanto autenticado garante um `Modelo teste` persistido na conta atual para validacao manual da linguagem, cobrindo os tipos estaveis da V1 e um bloco `SE` simples
 - O editor ja mostra estados de salvamento e erros de parsing de forma explicita
 - O editor ja oferece manual de sintaxe para ajudar o usuario final a escrever templates
 - O editor ja oferece botoes para inserir rapidamente variaveis e blocos condicionais genericos no template
@@ -23,12 +25,12 @@ Construir uma aplicacao web MPA para criacao, edicao, preenchimento e compilacao
 
 ## Proximo passo imediato
 
-O proximo passo real agora e definir a camada seguinte do editor e da IA:
+O proximo passo real agora e transformar o editor de templates em fluxo persistente de trabalho para o usuario autenticado:
 
-1. Refinar o comportamento esperado das variaveis `ia`
-2. Implementar fluxo assincrono de geracao sem contaminar a logica central do parser/compiler
-3. Manter o editor fino, consumindo apenas `Minuteiro.Documents`
-4. Depois disso avaliar versionamento inicial de templates
+1. Criar `generated_documents` para salvar respostas, contexto de IA e estado do preenchimento
+2. Permitir criar um documento a partir de um template e reabrir o rascunho depois
+3. Manter `Documents` como fronteira de dominio para templates e documentos gerados
+4. Depois disso avaliar refinamentos do editor e versionamento inicial dos templates
 
 ## Principios de arquitetura
 
@@ -181,6 +183,7 @@ Nao vamos implementar tudo isso agora, mas as camadas devem ser desenhadas sem a
 - textarea com o conteudo bruto do template
 - `phx-change` com debounce para atualizar preview e parser
 - botao `Salvar` para persistir no banco
+- evolucao planejada: toolbar de formatacao inline para negrito, italico e sublinhado sem abandonar o template como fonte textual
 
 ### Coluna 2 - Formulario dinamico
 
@@ -201,10 +204,10 @@ IA sera um complemento do formulario, nao parte obrigatoria do processo de compi
 
 ### Fluxo
 
-1. Usuario informa `API Key` e `Contexto`
+1. Ambiente expoe `GEMINI_API_KEY` em runtime e o usuario informa apenas o `Contexto Global`
 2. Variavel `ia` exibe prompt + botao `Gerar com IA`
 3. A geracao roda de forma assincrona
-4. O resultado atualiza `answers`
+4. O resultado atualiza `answers` e permanece editavel para revisao humana obrigatoria
 5. O preview recompila automaticamente
 
 ### Regra tecnica
@@ -212,6 +215,27 @@ IA sera um complemento do formulario, nao parte obrigatoria do processo de compi
 - evitar bloquear o LiveView
 - centralizar integracao HTTP fora da camada web
 - nao persistir `API Key` no banco
+
+## Preparacao para uso publico
+
+### Objetivo
+
+Abrir a aplicacao para usuarios reais com isolamento seguro dos dados e capacidade de salvar e reabrir os proprios modelos.
+
+### Requisitos minimos
+
+1. cadastro, login, logout e recuperacao de senha
+2. cada template pertence a um usuario
+3. dashboard lista apenas os templates do usuario autenticado
+4. editor so abre templates do proprio usuario
+5. queries, rotas e LiveViews precisam respeitar ownership
+
+### Estrategia de MVP
+
+1. usar ownership direto por `user_id`
+2. nao introduzir `workspace` agora
+3. manter `Documents` como fronteira de dominio para a camada web
+4. deixar `generated_documents` e `template_versions` como evolucoes seguintes
 
 ## Ordem de execucao sugerida
 
@@ -278,8 +302,100 @@ Status: concluida na base V1
 2. Adicionar geracao por variavel `ia`
 3. Integrar fluxo assincrono no LiveView
 4. Tratar loading, erro e sucesso
+5. Concluida na primeira iteracao sem persistencia dedicada
 
-### Fase 7 - Preparacao para auditoria
+### Fase 7 - Autenticacao e ownership dos templates
+
+Status: concluida
+
+1. Rodar `mix phx.gen.auth Accounts User users`
+2. Revisar rotas autenticadas e layout base do Phoenix 1.8
+3. Adicionar `user_id` em `templates`
+4. Tornar `user_id` obrigatorio no schema e no banco
+5. Atualizar `Documents` para operar por usuario autenticado
+6. Restringir dashboard e editor ao usuario logado
+7. Ajustar a experiencia de criacao para nascer com dono definido
+8. Cobrir ownership, login e acesso indevido com testes
+
+### Plano tecnico mais concreto da Fase 7
+
+1. Geracao de auth
+   - gerar contexto `Accounts`, schema `User`, tokens e telas padrao
+   - habilitar cadastro, sessao, confirmacao e reset de senha
+
+2. Dados
+   - criar migration adicionando `user_id` em `templates`
+   - definir `belongs_to :user, Minuteiro.Accounts.User` em `Template`
+   - impedir `user_id` vindo por params do navegador
+
+3. Contexto `Documents`
+   - trocar funcoes globais por funcoes escopadas por usuario
+   - `list_templates(user)`
+   - `get_template!(user, id)`
+   - `create_template(user, attrs)`
+   - filtrar `update` e `delete` por ownership
+
+4. Web layer
+   - proteger `/` e `/templates/:id/edit` por autenticacao
+   - passar `current_user` ou `current_scope` para dashboard e editor
+   - retornar 404 ou redirecionamento seguro quando o template nao pertencer ao usuario
+
+5. Ajustes de dev
+   - revisar o bootstrap do `Modelo teste` para nao conflitar com multiusuario
+   - em dev, decidir se o modelo de exemplo sera criado por usuario autenticado ou removido do fluxo automatico
+
+6. Testes
+   - cobertura de cadastro e login
+   - cobertura de isolamento entre usuarios
+   - cobertura de rotas protegidas
+   - cobertura do editor abrindo apenas modelos do proprio usuario
+
+7. Criterio de pronto
+   - usuario consegue se cadastrar e entrar
+   - usuario consegue criar, listar, abrir e salvar apenas os proprios templates
+    - acesso cruzado entre usuarios nao funciona
+    - suite automatizada cobre o fluxo principal
+
+### Fase 8 - Generated documents
+
+Status: proxima fase concreta
+
+1. Criar migration e schema de `generated_documents`
+2. Persistir `answers`, `ai_context`, `status` e `final_document`
+3. Vincular cada documento gerado ao `user_id` e `template_id`
+4. Expor CRUD escopado por ownership em `Minuteiro.Documents`
+5. Permitir criar um documento a partir de um template
+6. Permitir salvar e reabrir rascunhos de preenchimento
+7. Cobrir ownership e retomada de sessao com testes
+
+### Plano tecnico curto da Fase 8
+
+1. Banco
+   - criar tabela `generated_documents`
+   - campos iniciais: `user_id`, `template_id`, `title`, `status`, `answers`, `ai_context`, `final_document`
+
+2. Dominio
+   - criar schema `Minuteiro.Documents.GeneratedDocument`
+   - adicionar API escopada em `Minuteiro.Documents` para listar, criar, buscar e atualizar documentos gerados
+
+3. Web layer
+   - adicionar fluxo para criar um documento a partir de um template
+   - adicionar tela para reabrir documentos salvos
+   - manter o editor de template separado do editor de preenchimento do documento gerado
+
+4. Criterio de pronto
+   - usuario autenticado consegue iniciar um documento a partir de um template proprio
+   - usuario consegue salvar e reabrir o mesmo rascunho depois
+   - acesso cruzado entre usuarios nao funciona
+
+### Fase 9 - Formatacao rica do editor
+
+1. Adicionar toolbar de formatacao no editor
+2. Suportar negrito, italico e sublinhado no conteudo do template
+3. Preservar compatibilidade com variaveis, condicionais e preview compilado
+4. Renderizar preview formatado com sanitizacao segura
+
+### Fase 10 - Preparacao para auditoria
 
 1. Definir modelo de `template_versions`
 2. Definir modelo de `generated_documents`
@@ -287,7 +403,7 @@ Status: concluida na base V1
 
 ## Foco atual
 
-O foco atual saiu da fundacao da UI e passou para o refinamento do editor e para a futura camada de IA assincrona. A prioridade agora e preservar a separacao de responsabilidades: parser/compiler no nucleo, `Documents` como API de dominio, e LiveView apenas como orquestrador de tela.
+O foco atual saiu da fundacao da UI e passou da autenticacao para a persistencia do fluxo real de trabalho do usuario. A prioridade agora e implementar `generated_documents` sem quebrar a separacao de responsabilidades: parser/compiler no nucleo, `Documents` como API de dominio, e LiveView apenas como orquestrador de tela.
 
 ## Definicao de pronto por etapa
 

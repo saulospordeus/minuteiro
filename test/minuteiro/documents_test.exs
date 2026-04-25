@@ -1,42 +1,63 @@
 defmodule Minuteiro.DocumentsTest do
   use Minuteiro.DataCase, async: true
 
+  alias Minuteiro.AccountsFixtures
   alias Minuteiro.Documents
   alias Minuteiro.Documents.Template
 
   @invalid_attrs %{title: nil, description: nil, content: nil}
 
-  test "list_templates/0 returns all templates" do
-    template = template_fixture()
-
-    assert Documents.list_templates() == [template]
+  setup do
+    %{scope: AccountsFixtures.user_scope_fixture()}
   end
 
-  test "get_template!/1 returns the template with given id" do
-    template = template_fixture()
+  test "list_templates/1 returns all templates for the scope", %{scope: scope} do
+    template = template_fixture(scope)
 
-    assert Documents.get_template!(template.id) == template
+    assert Documents.list_templates(scope) == [template]
   end
 
-  test "create_template/1 with valid data creates a template" do
+  test "list_templates/1 excludes templates from other users", %{scope: scope} do
+    template = template_fixture(scope)
+    other_scope = AccountsFixtures.user_scope_fixture()
+    _other_template = template_fixture(other_scope, %{title: "Template alheio"})
+
+    assert Documents.list_templates(scope) == [template]
+  end
+
+  test "get_template!/2 returns the template with given id for the scope", %{scope: scope} do
+    template = template_fixture(scope)
+
+    assert Documents.get_template!(scope, template.id) == template
+  end
+
+  test "get_template!/2 raises when accessing another user's template", %{scope: scope} do
+    other_scope = AccountsFixtures.user_scope_fixture()
+    template = template_fixture(other_scope)
+
+    assert_raise Ecto.NoResultsError, fn -> Documents.get_template!(scope, template.id) end
+  end
+
+  test "create_template/2 with valid data creates a template", %{scope: scope} do
     valid_attrs = %{
       title: "Contrato de prestacao de servicos",
       description: "Modelo base para contratos simples",
       content: "!@contratante[texto]\n@contratante"
     }
 
-    assert {:ok, %Template{} = template} = Documents.create_template(valid_attrs)
+    assert {:ok, %Template{} = template} = Documents.create_template(scope, valid_attrs)
     assert template.title == "Contrato de prestacao de servicos"
     assert template.description == "Modelo base para contratos simples"
     assert template.content == "!@contratante[texto]\n@contratante"
+    assert template.user_id == scope.user.id
   end
 
-  test "create_template/1 with invalid data returns error changeset" do
-    assert {:error, %Ecto.Changeset{}} = Documents.create_template(@invalid_attrs)
+  test "create_template/2 with invalid data returns error changeset", %{scope: scope} do
+    assert {:error, %Ecto.Changeset{}} = Documents.create_template(scope, @invalid_attrs)
   end
 
-  test "update_template/2 with valid data updates the template" do
-    template = template_fixture()
+  test "update_template/3 with valid data updates the template", %{scope: scope} do
+    template = template_fixture(scope)
 
     update_attrs = %{
       title: "Peticao inicial",
@@ -44,35 +65,39 @@ defmodule Minuteiro.DocumentsTest do
       content: "!@autor[texto]\n@autor"
     }
 
-    assert {:ok, %Template{} = template} = Documents.update_template(template, update_attrs)
+    assert {:ok, %Template{} = template} =
+             Documents.update_template(scope, template, update_attrs)
+
     assert template.title == "Peticao inicial"
     assert template.description == "Modelo atualizado"
     assert template.content == "!@autor[texto]\n@autor"
   end
 
-  test "update_template/2 with invalid data returns error changeset" do
-    template = template_fixture()
+  test "update_template/3 with invalid data returns error changeset", %{scope: scope} do
+    template = template_fixture(scope)
 
-    assert {:error, %Ecto.Changeset{}} = Documents.update_template(template, @invalid_attrs)
-    assert template == Documents.get_template!(template.id)
+    assert {:error, %Ecto.Changeset{}} =
+             Documents.update_template(scope, template, @invalid_attrs)
+
+    assert template == Documents.get_template!(scope, template.id)
   end
 
-  test "delete_template/1 deletes the template" do
-    template = template_fixture()
+  test "delete_template/2 deletes the template", %{scope: scope} do
+    template = template_fixture(scope)
 
-    assert {:ok, %Template{}} = Documents.delete_template(template)
-    assert_raise Ecto.NoResultsError, fn -> Documents.get_template!(template.id) end
+    assert {:ok, %Template{}} = Documents.delete_template(scope, template)
+    assert_raise Ecto.NoResultsError, fn -> Documents.get_template!(scope, template.id) end
   end
 
-  test "change_template/1 returns a template changeset" do
-    template = template_fixture()
+  test "change_template/1 returns a template changeset", %{scope: scope} do
+    template = template_fixture(scope)
 
     assert %Ecto.Changeset{} = Documents.change_template(template)
   end
 
-  test "parse_template/1 parses persisted template content" do
+  test "parse_template/1 parses persisted template content", %{scope: scope} do
     template =
-      template_fixture(%{
+      template_fixture(scope, %{
         content: "!@nome[texto]\n[SE @ativo = sim]@nome[FIM_SE]"
       })
 
@@ -89,9 +114,9 @@ defmodule Minuteiro.DocumentsTest do
     assert parsed.references == ["cidade"]
   end
 
-  test "ensure_sample_template/0 creates the sample template once" do
-    assert {:ok, first_template} = Documents.ensure_sample_template()
-    assert {:ok, second_template} = Documents.ensure_sample_template()
+  test "ensure_sample_template/1 creates the sample template once per scope", %{scope: scope} do
+    assert {:ok, first_template} = Documents.ensure_sample_template(scope)
+    assert {:ok, second_template} = Documents.ensure_sample_template(scope)
 
     assert first_template.id == second_template.id
     assert first_template.title == "Modelo teste"
@@ -104,15 +129,15 @@ defmodule Minuteiro.DocumentsTest do
     refute first_template.content =~ "[ia"
   end
 
-  test "ensure_sample_template/0 refreshes an existing stale sample template" do
+  test "ensure_sample_template/1 refreshes an existing stale sample template", %{scope: scope} do
     {:ok, stale_template} =
-      Documents.create_template(%{
+      Documents.create_template(scope, %{
         title: "Modelo teste",
         description: "Template antigo",
         content: "!@nome: saulo\n\nMeu nome e @nome."
       })
 
-    assert {:ok, refreshed_template} = Documents.ensure_sample_template()
+    assert {:ok, refreshed_template} = Documents.ensure_sample_template(scope)
 
     assert refreshed_template.id == stale_template.id
     assert refreshed_template.description =~ "todos os tipos ja suportados"
@@ -141,9 +166,9 @@ defmodule Minuteiro.DocumentsTest do
     assert analysis.final_document == "Representante:"
   end
 
-  test "compile_template/2 compiles persisted template content" do
+  test "compile_template/2 compiles persisted template content", %{scope: scope} do
     template =
-      template_fixture(%{
+      template_fixture(scope, %{
         content: "!@nome[texto]\n[SE @ativo = sim]Ola, @nome[FIM_SE]"
       })
 
@@ -156,6 +181,28 @@ defmodule Minuteiro.DocumentsTest do
 
     assert {:ok, "Cargo: Advogada"} =
              Documents.compile_template_content(content, %{cargo: "Advogada"})
+  end
+
+  test "generate_ai_text/1 delegates to the configured AI client" do
+    assert {:ok, generated_text} =
+             Documents.generate_ai_text(%{
+               prompt: "Resuma o caso em um paragrafo.",
+               context: "Autor requer tutela de urgencia.",
+               variable_name: "resumo"
+             })
+
+    assert generated_text =~ "Resuma o caso em um paragrafo."
+    assert generated_text =~ "Autor requer tutela de urgencia."
+  end
+
+  test "generate_ai_text/1 validates a missing prompt" do
+    assert {:error, "Informe uma instrucao antes de gerar com IA."} =
+             Documents.generate_ai_text(%{prompt: "  ", context: "qualquer"})
+  end
+
+  test "generate_ai_text/1 propagates client errors" do
+    assert {:error, "Falha simulada da IA para testes."} =
+             Documents.generate_ai_text(%{prompt: "[force_error]", context: "qualquer"})
   end
 
   test "compile_template_content/2 returns parser errors for invalid content" do
@@ -179,6 +226,22 @@ defmodule Minuteiro.DocumentsTest do
 
     assert Enum.map(analysis.variables, & &1.name) == ["tem_representante", "representante"]
     assert analysis.final_document == "Representante:"
+  end
+
+  test "analyze_template_content/2 keeps ia variables active with their prompt metadata" do
+    content = "!@fundamentacao[ia: Redija a fundamentacao com base no contexto.]\n@fundamentacao"
+
+    assert {:ok, analysis} = Documents.analyze_template_content(content, %{})
+
+    assert analysis.variables == [
+             %{
+               name: "fundamentacao",
+               type: "ia",
+               prompt: "Redija a fundamentacao com base no contexto.",
+               raw_options: "Redija a fundamentacao com base no contexto.",
+               options: []
+             }
+           ]
   end
 
   test "analyze_template_content/2 only exposes conditional variables when branch is active" do
@@ -256,7 +319,7 @@ defmodule Minuteiro.DocumentsTest do
     assert Enum.map(adult_analysis.variables, & &1.name) == ["idade", "capaz"]
   end
 
-  defp template_fixture(attrs \\ %{}) do
+  defp template_fixture(scope, attrs \\ %{}) do
     valid_attrs = %{
       title: "Modelo de procuracao",
       description: "Documento base para procuracao",
@@ -265,7 +328,7 @@ defmodule Minuteiro.DocumentsTest do
 
     attrs = Map.merge(valid_attrs, attrs)
 
-    {:ok, template} = Documents.create_template(attrs)
+    {:ok, template} = Documents.create_template(scope, attrs)
     template
   end
 end

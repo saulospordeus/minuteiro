@@ -8,6 +8,8 @@ defmodule Minuteiro.Documents.Template do
     field :description, :string
     field :content, :string
 
+    belongs_to :user, Minuteiro.Accounts.User
+
     timestamps(type: :utc_datetime)
   end
 

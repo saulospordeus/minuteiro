@@ -3,6 +3,14 @@ defmodule MinuteiroWeb.PageControllerTest do
 
   alias Minuteiro.Documents
 
+  setup :register_and_log_in_user
+
+  test "GET / redirects unauthenticated users to login" do
+    conn = Phoenix.ConnTest.build_conn() |> get(~p"/")
+
+    assert redirected_to(conn) == ~p"/users/log-in"
+  end
+
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
 
@@ -15,9 +23,9 @@ defmodule MinuteiroWeb.PageControllerTest do
     assert response =~ "Manual da sintaxe"
   end
 
-  test "GET / lists saved templates", %{conn: conn} do
+  test "GET / lists saved templates", %{conn: conn, scope: scope} do
     {:ok, template} =
-      Documents.create_template(%{
+      Documents.create_template(scope, %{
         title: "Modelo de notificacao",
         description: "Template para comunicacoes formais",
         content: "!@destinatario[texto]\n@destinatario"
@@ -31,7 +39,7 @@ defmodule MinuteiroWeb.PageControllerTest do
     assert response =~ "template-card-#{template.id}"
   end
 
-  test "GET / bootstraps the local sample template when enabled", %{conn: conn} do
+  test "GET / bootstraps the local sample template when enabled", %{conn: conn, scope: scope} do
     previous_value = Application.get_env(:minuteiro, :bootstrap_sample_template, false)
     Application.put_env(:minuteiro, :bootstrap_sample_template, true)
 
@@ -42,7 +50,7 @@ defmodule MinuteiroWeb.PageControllerTest do
     conn = get(conn, ~p"/")
     response = html_response(conn, 200)
 
-    [template] = Documents.list_templates()
+    [template] = Documents.list_templates(scope)
 
     assert response =~ "Modelo teste"
     assert response =~ template.description
@@ -56,7 +64,7 @@ defmodule MinuteiroWeb.PageControllerTest do
     refute template.content =~ "[ia"
   end
 
-  test "POST /templates creates a template and redirects", %{conn: conn} do
+  test "POST /templates creates a template and redirects", %{conn: conn, scope: scope} do
     conn =
       post(conn, ~p"/templates", %{
         "template" => %{
@@ -66,7 +74,7 @@ defmodule MinuteiroWeb.PageControllerTest do
         }
       })
 
-    [template] = Documents.list_templates()
+    [template] = Documents.list_templates(scope)
 
     assert redirected_to(conn) == ~p"/templates/#{template.id}/edit"
     assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Modelo criado com sucesso."

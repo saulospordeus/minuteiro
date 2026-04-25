@@ -409,22 +409,37 @@ defmodule Minuteiro.Parser do
       [type] ->
         normalized_type = normalize_type(type)
 
-        if normalized_type == "booleano" do
-          boolean_variable(name)
-        else
-          %{name: name, type: normalized_type, raw_options: nil, options: []}
-        end
+        build_variable_without_options(normalized_type, name)
 
       [type, raw_options] ->
+        normalized_type = normalize_type(type)
         raw_options = String.trim(raw_options)
 
-        %{
-          name: name,
-          type: normalize_type(type),
-          raw_options: raw_options,
-          options: split_options(raw_options)
-        }
+        build_variable_with_options(normalized_type, name, raw_options)
     end
+  end
+
+  defp build_variable_without_options("booleano", name), do: boolean_variable(name)
+
+  defp build_variable_without_options("ia", name) do
+    %{name: name, type: "ia", prompt: "", raw_options: nil, options: []}
+  end
+
+  defp build_variable_without_options(type, name) do
+    %{name: name, type: type, raw_options: nil, options: []}
+  end
+
+  defp build_variable_with_options("ia", name, prompt) do
+    %{name: name, type: "ia", prompt: prompt, raw_options: prompt, options: []}
+  end
+
+  defp build_variable_with_options(type, name, raw_options) do
+    %{
+      name: name,
+      type: type,
+      raw_options: raw_options,
+      options: split_options(raw_options)
+    }
   end
 
   defp normalize_type(type) do

@@ -10,12 +10,13 @@ This is a web application written using the Phoenix web framework.
 - Ecto + PostgreSQL are configured and validated locally
 - TailwindCSS, DaisyUI, Req, LiveView, and Bandit are installed and working
 - `mix setup`, `mix precommit`, and `mix phx.server` have already been validated successfully in this environment
-- `Minuteiro.Documents` and `Minuteiro.Documents.Template` already exist with the initial `templates` persistence model
+- `Minuteiro.Documents`, `Minuteiro.Documents.Template`, `Minuteiro.Accounts`, and `Minuteiro.Accounts.User` already exist with authenticated ownership of templates by user
 - `Minuteiro.Parser` and `Minuteiro.Compiler` already implement the V1 template language core with automated tests
-- `/` already renders a dashboard for listing and creating templates
-- In development, opening `/` also ensures a persisted `Modelo teste` exists for local exploration, covering all supported variable types except `ia` plus a simple `SE` block
-- `/templates/:id/edit` already renders `TemplateEditorLive` with a CodeMirror-based editor, variable autocomplete, stable syntax highlights for declarations and references, support for shorthand declarations (`!@campo`, `!@campo?`), semicolon-separated list options, a dynamic form, compiled preview, syntax manual, save state, parsing feedback, and syntax snippet buttons for the most common template structures
-- The next major product layer is refining the editor workflow and then adding async AI support for `ia` variables
+- `/` now requires authentication and renders a dashboard for listing and creating only the current user's templates
+- In development, opening `/` while authenticated also ensures a persisted `Modelo teste` exists for local exploration in the current user's account, covering all stable variable types plus a simple `SE` block
+- `/templates/:id/edit` already renders `TemplateEditorLive` with a CodeMirror-based editor, variable autocomplete, stable syntax highlights for declarations and references, support for shorthand declarations (`!@campo`, `!@campo?`), semicolon-separated list options, chained conditional branches, a dynamic form, compiled preview, syntax manual, save state, parsing feedback, syntax snippet buttons, and async AI generation cards with mandatory human review for `ia` variables
+- Async AI generation now runs through `Minuteiro.Documents`, keeps the compiler pure, uses provider configuration from runtime env, and degrades gracefully when `GEMINI_API_KEY` is missing
+- Phoenix authentication via `phx.gen.auth` is installed with LiveView screens, and the dashboard plus editor are protected inside authenticated routes/live sessions using `current_scope`
 - `:swoosh` is pinned to a version compatible with the current Elixir toolchain in this environment. Do not upgrade it casually without also revisiting the Elixir version policy
 
 ## Product architecture
@@ -103,7 +104,7 @@ This is a web application written using the Phoenix web framework.
 
 ## Current implementation priority
 
-- Next step: refine the editor workflow where needed and define the exact behavior of `ia` variables before implementing async AI integration
+- Next step: add `generated_documents` so authenticated users can save, reopen, and continue document-filling sessions with persisted answers and AI context
 - Keep the web layer consuming `Minuteiro.Documents` instead of reaching directly into parser/compiler internals
 
 ## Project guidelines
@@ -149,6 +150,67 @@ custom classes must fully style the input
 - Ensure **clean typography, spacing, and layout balance** for a refined, premium look
 - Focus on **delightful details** like hover effects, loading states, and smooth page transitions
 
+
+<!-- phoenix-gen-auth-start -->
+## Authentication
+
+- **Always** handle authentication flow at the router level with proper redirects
+- **Always** be mindful of where to place routes. `phx.gen.auth` creates multiple router plugs and `live_session` scopes:
+  - A plug `:fetch_current_scope_for_user` that is included in the default browser pipeline
+  - A plug `:require_authenticated_user` that redirects to the log in page when the user is not authenticated
+  - A `live_session :current_user` scope - for routes that need the current user but don't require authentication, similar to `:fetch_current_scope_for_user`
+  - A `live_session :require_authenticated_user` scope - for routes that require authentication, similar to the plug with the same name
+  - In both cases, a `@current_scope` is assigned to the Plug connection and LiveView socket
+  - A plug `redirect_if_user_is_authenticated` that redirects to a default path in case the user is authenticated - useful for a registration page that should only be shown to unauthenticated users
+- **Always let the user know in which router scopes, `live_session`, and pipeline you are placing the route, AND SAY WHY**
+- `phx.gen.auth` assigns the `current_scope` assign - it **does not assign a `current_user` assign**
+- Always pass the assign `current_scope` to context modules as first argument. When performing queries, use `current_scope.user` to filter the query results
+- To derive/access `current_user` in templates, **always use the `@current_scope.user`**, never use **`@current_user`** in templates or LiveViews
+- **Never** duplicate `live_session` names. A `live_session :current_user` can only be defined __once__ in the router, so all routes for the `live_session :current_user`  must be grouped in a single block
+- Anytime you hit `current_scope` errors or the logged in session isn't displaying the right content, **always double check the router and ensure you are using the correct plug and `live_session` as described below**
+
+### Routes that require authentication
+
+LiveViews that require login should **always be placed inside the __existing__ `live_session :require_authenticated_user` block**:
+
+    scope "/", AppWeb do
+      pipe_through [:browser, :require_authenticated_user]
+
+      live_session :require_authenticated_user,
+        on_mount: [{MinuteiroWeb.UserAuth, :require_authenticated}] do
+        # phx.gen.auth generated routes
+        live "/users/settings", UserLive.Settings, :edit
+        live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+        # our own routes that require logged in user
+        live "/", MyLiveThatRequiresAuth, :index
+      end
+    end
+
+Controller routes must be placed in a scope that sets the `:require_authenticated_user` plug:
+
+    scope "/", AppWeb do
+      pipe_through [:browser, :require_authenticated_user]
+
+      get "/", MyControllerThatRequiresAuth, :index
+    end
+
+### Routes that work with or without authentication
+
+LiveViews that can work with or without authentication, **always use the __existing__ `:current_user` scope**, ie:
+
+    scope "/", MyAppWeb do
+      pipe_through [:browser]
+
+      live_session :current_user,
+        on_mount: [{MinuteiroWeb.UserAuth, :mount_current_scope}] do
+        # our own routes that work with or without authentication
+        live "/", PublicLive
+      end
+    end
+
+Controllers automatically have the `current_scope` available if they use the `:browser` pipeline.
+
+<!-- phoenix-gen-auth-end -->
 
 <!-- usage-rules-start -->
 

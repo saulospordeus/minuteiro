@@ -5,6 +5,9 @@ defmodule Minuteiro.Documents do
 
   import Ecto.Query, warn: false
 
+  alias Minuteiro.AI
+  alias Minuteiro.Accounts.Scope
+  alias Minuteiro.Accounts.User
   alias Minuteiro.Compiler
   alias Minuteiro.Documents.Template
   alias Minuteiro.Parser
@@ -14,36 +17,46 @@ defmodule Minuteiro.Documents do
     %Template{}
   end
 
-  def ensure_sample_template do
+  def ensure_sample_template(%Scope{user: %User{} = user} = current_scope) do
     attrs = sample_template_attrs()
 
-    case Repo.get_by(Template, title: attrs.title) do
-      nil -> create_template(attrs)
-      template -> update_template(template, attrs)
+    case Repo.get_by(owned_templates_query(user), title: attrs.title) do
+      nil -> create_template(current_scope, attrs)
+      template -> update_template(current_scope, template, attrs)
     end
   end
 
-  def list_templates do
-    from(template in Template, order_by: [desc: template.inserted_at])
+  def list_templates(%Scope{user: %User{} = user}) do
+    from(template in owned_templates_query(user), order_by: [desc: template.inserted_at])
     |> Repo.all()
   end
 
-  def get_template!(id), do: Repo.get!(Template, id)
+  def get_template(%Scope{user: %User{} = user}, id) do
+    Repo.get_by(owned_templates_query(user), id: id)
+  end
 
-  def create_template(attrs \\ %{}) do
-    %Template{}
+  def get_template!(%Scope{user: %User{} = user}, id) do
+    Repo.get_by!(owned_templates_query(user), id: id)
+  end
+
+  def create_template(%Scope{user: %User{} = user}, attrs \\ %{}) do
+    user
+    |> Ecto.build_assoc(:templates)
     |> Template.changeset(attrs)
     |> Repo.insert()
   end
 
-  def update_template(%Template{} = template, attrs) do
-    template
+  def update_template(%Scope{} = current_scope, %Template{} = template, attrs) do
+    current_scope
+    |> get_template!(template.id)
     |> Template.changeset(attrs)
     |> Repo.update()
   end
 
-  def delete_template(%Template{} = template) do
-    Repo.delete(template)
+  def delete_template(%Scope{} = current_scope, %Template{} = template) do
+    current_scope
+    |> get_template!(template.id)
+    |> Repo.delete()
   end
 
   def change_template(%Template{} = template, attrs \\ %{}) do
@@ -87,6 +100,18 @@ defmodule Minuteiro.Documents do
     end
   end
 
+  def generate_ai_text(attrs) when is_map(attrs) do
+    prompt = fetch_string(attrs, :prompt)
+    context = fetch_string(attrs, :context)
+    variable_name = fetch_string(attrs, :variable_name)
+
+    if prompt == "" do
+      {:error, "Informe uma instrucao antes de gerar com IA."}
+    else
+      AI.generate_text(%{prompt: prompt, context: context, variable_name: variable_name})
+    end
+  end
+
   defp sample_template_attrs do
     %{
       title: "Modelo teste",
@@ -115,5 +140,16 @@ defmodule Minuteiro.Documents do
         """
         |> String.trim()
     }
+  end
+
+  defp fetch_string(attrs, key) do
+    attrs
+    |> Map.get(key, Map.get(attrs, to_string(key), ""))
+    |> to_string()
+    |> String.trim()
+  end
+
+  defp owned_templates_query(%User{} = user) do
+    from(template in Template, where: template.user_id == ^user.id)
   end
 end

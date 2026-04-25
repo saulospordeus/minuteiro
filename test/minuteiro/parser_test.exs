@@ -96,6 +96,25 @@ defmodule Minuteiro.ParserTest do
            ]
   end
 
+  test "parse/1 extracts ia declarations with the full prompt text" do
+    template =
+      "!@fundamentacao[ia: Redija a fundamentacao com base no contexto bruto.]\n@fundamentacao"
+
+    assert {:ok, parsed} = Parser.parse(template)
+
+    assert parsed.variables == [
+             %{
+               name: "fundamentacao",
+               type: "ia",
+               prompt: "Redija a fundamentacao com base no contexto bruto.",
+               raw_options: "Redija a fundamentacao com base no contexto bruto.",
+               options: []
+             }
+           ]
+
+    assert parsed.references == ["fundamentacao"]
+  end
+
   test "parse/1 keeps multiple top-level segments in order" do
     template = "Inicio [SE @ativo = sim]meio[SENAO]fim[FIM_SE] encerramento"
 
